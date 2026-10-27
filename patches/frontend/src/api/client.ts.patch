@@ -1,0 +1,13 @@
+diff --git a/frontend/src/api/client.ts b/frontend/src/api/client.ts
+index 12691fb..b0e9158 100644
+--- a/frontend/src/api/client.ts
++++ b/frontend/src/api/client.ts
+@@ -73,7 +73,7 @@ export const api = {
+     target_test?: string | null;
+     symptom?: string;
+     title?: string;
+-    mode: 'forge' | 'baseline';
++    mode: 'forge' | 'baseline' | 'iterative';
+   }) => request<Investigation>('/investigations', json(body)),
+   cancelInvestigation: (id: string) => request<Investigation>(`/investigations/${id}/cancel`, { method: 'POST' }),
+   deleteInvestigation: (id: string) => request<void>(`/investigations/${id}`, { method: 'DELETE' }),

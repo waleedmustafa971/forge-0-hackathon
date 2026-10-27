@@ -1,0 +1,13 @@
+diff --git a/backend/tests/conftest.py b/backend/tests/conftest.py
+index 728c691..10f7026 100644
+--- a/backend/tests/conftest.py
++++ b/backend/tests/conftest.py
+@@ -17,6 +17,8 @@ os.environ.update(
+         "AI_PROVIDER": "mock",
+         "META_API_KEY": "",
+         "MODEL_API_KEY": "",
++        "OPENAI_COMPAT_API_KEY": "",
++        "AI_SECONDARY_PROVIDER": "",
+         "AUTH_MODE": "local",
+         "SEED_DEMO": "true",
+         "LOG_FORMAT": "text",

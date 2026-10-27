@@ -1,0 +1,110 @@
+diff --git a/docs/ARCHITECTURE.md b/docs/ARCHITECTURE.md
+index 5bf6439..567d4f6 100644
+--- a/docs/ARCHITECTURE.md
++++ b/docs/ARCHITECTURE.md
+@@ -74,12 +74,12 @@ sequenceDiagram
+ 
+ | Agent | Kind | Responsibility | Code |
+ | --- | --- | --- | --- |
+-| **A · Repository Investigator** | deterministic | Languages, frameworks, dependencies, test runner detection; baseline suite run; TAP parsing; target failure + stack frames; isolated reproduction (E0); relevant-file collection through the import graph | `backend/agents/investigator.py`, `services/repo_analysis.py` |
++| **A · Repository Investigator** | deterministic | Languages, frameworks, dependencies, test runner detection; baseline suite run; TAP (node:test) and JUnit XML (pytest) parsing; target failure + stack frames; reproduction (E0) with **flaky-test triage**; relevant-file collection through the import graph | `backend/agents/investigator.py`, `services/repo_analysis.py` |
+ | **B · Hypothesis Generator** | model | 2–5 mutually exclusive explanations with mechanism, locations, supporting/contradicting evidence and priors; enforces ≥2 competitors | `agents/hypothesis.py` |
+ | **C · Experiment Designer** | model + validator | Discriminating experiments: new test files and/or counterfactual source interventions, with a prediction per hypothesis; every design is validated against the sandbox contract before execution | `agents/experiment_designer.py` |
+ | **D · Experiment Executor** | deterministic | Materialises the experiment in a disposable copy, runs it in Docker, classifies pass/fail/error/timeout, retries infrastructure failures once | `agents/executor.py`, `sandbox/` |
+ | **E · Repair Engineer** | model | Minimal search/replace patch for the leading hypothesis; may not touch tests; receives verifier feedback on retries | `agents/repair.py` |
+-| **F · Independent Verifier** | deterministic | Re-applies the stored edits to a fresh copy, runs the full suite on original and patched code, re-runs the target twice in isolation, diffs results test-by-test | `agents/verifier.py` |
++| **F · Independent Verifier** | deterministic | Re-applies the stored edits to a fresh copy, runs the full suite on original and patched code, re-runs the target in isolation (twice; 8× for an intermittent target; whole file for an order-dependent one), diffs results test-by-test | `agents/verifier.py` |
+ | **G · Orchestrator** | deterministic | State machine, budgets (time, model calls, experiments, rounds, repair attempts), belief updates, persistence, decisions, final report | `agents/orchestrator.py`, `agents/belief.py` |
+ 
+ Model-facing agents communicate exclusively through Pydantic contracts (`core/schemas.py`):
+@@ -94,6 +94,10 @@ it ran — e.g. *"if H2 is true, routing the reservation through `tx` makes the
+ After execution (`agents/belief.py`):
+ 
+ * prediction matched → likelihood 0.9; contradicted → 0.1; no prediction → 0.5;
++* a prediction the observation cannot check (e.g. it names output that was never asserted) is
++  recorded as **untested** and also scores 0.5, instead of counting against the hypothesis;
++* a failure raised by the runtime (an `unhandledRejection` escaping a probe) is reported as such,
++  not as an assertion failure, so a correct prediction about leaked rejections is not penalised;
+ * posteriors are renormalised (including the unexplained bucket);
+ * a hypothesis is **refuted** when it has been contradicted and falls below 10%;
+ * it is **confirmed** only at ≥75% with at least one *discriminating* supporting experiment and no
+@@ -111,6 +115,27 @@ Experiment kinds:
+ * **intervention** — counterfactual edits applied only to a disposable copy, then the original
+   failing test is re-run ("would the failure disappear if…?").
+ 
++### Flaky-test triage (added 2026-10-27)
++
++Before any hypothesis, the Investigator re-runs the target three times in isolation and, if it
++never fails there, once with the rest of its file. The target is classified as **deterministic**,
++**intermittent** (fails some isolated runs), **order-dependent** (passes alone, fails with its
++neighbours: shared state leaking between tests) or **unknown**. The classification goes into the
++hypothesis prompt, the evidence report and the verifier's re-run policy.
++
++## Modes
++
++The same orchestrator, sandbox, provider and verifier run three systems, so the benchmark compares
++methods rather than plumbing:
++
++| Mode | What the model gets | Claims a fix when |
++| --- | --- | --- |
++| `baseline` · Baseline A | one repair call | it produced a patch (the verifier only measures it) |
++| `iterative` · Baseline C | an edit → run tests → see results loop, with the same call budget as FORGE-0 (`1 + max_experiment_rounds + max_repair_attempts`) and the full test deltas of every earlier attempt | the verifier accepts a patch |
++| `forge` · FORGE-0 | hypotheses → experiments → belief updates → repair | the verifier accepts a patch |
++
++Baseline C is the fair comparison: it is how coding agents work today.
++
+ ## Verification contract
+ 
+ A patch is **verified** only if, on fresh copies made from the immutable snapshot:
+@@ -137,7 +162,7 @@ go through Alembic (`backend/alembic/versions`).
+ `providers/base.py` defines `AIProvider.generate(request, schema)`; every agent request carries both
+ rendered prompts (for real models) and structured context (for the mock).
+ 
+-* **MockProvider** — scripted fixtures for the five demo defects, generic non-diagnostic output
++* **MockProvider** — scripted fixtures for the original five demo defects (D1–D5), generic non-diagnostic output
+   otherwise (never a fabricated patch). Every completion is flagged `simulated`, token counts are
+   flagged as estimates.
+ * **OpenAICompatibleProvider** — `/chat/completions` over httpx with JSON-schema/JSON-object
+@@ -145,6 +170,13 @@ rendered prompts (for real models) and structured context (for the mock).
+   retry with backoff on 408/409/429/5xx.
+ * **MetaModelProvider** — the OpenAI-compatible transport configured to Meta's documented contract
+   (see `docs/API_INTEGRATION.md`).
++* **RoutingProvider** (added 2026-10-27) — splits the work between two models by task. With
++  `AI_PROVIDER=meta` and `AI_SECONDARY_PROVIDER=openai`, Muse Spark 1.3 forms the hypotheses while
++  the open-weights Muse Spark Open (on Baseten) designs experiments and writes repairs
++  (`AI_SECONDARY_TASKS=experiments,repair`). Every model call records which model served it.
++
++A reply cut off at `max_completion_tokens` is retried once with double the limit (capped at
++32,768) before the call fails.
+ 
+ If `AI_PROVIDER=meta` but no key is configured, the registry falls back to mock mode and the
+ investigation records and displays the reason.
+@@ -158,15 +190,25 @@ observations, experiment code, counterfactual diffs, raw sandbox output), Patch
+ test-by-test deltas, re-verification, approve/reject, download), Evidence report (Markdown export),
+ Evaluation, Settings. Dark theme by default; no secrets reach the browser.
+ 
++## GitHub integration (added 2026-10-27)
++
++`forge0-ci` (`backend/cli/ci.py`) runs an investigation headlessly against a checked-out repository
++(temporary SQLite, real sandbox). With a verified fix it commits the patch on a `forge0/fix-…` branch
++as `forge0[bot]`, pushes it and opens a pull request whose description is the evidence report
++(`services/pr_report.py`); without one it comments the evidence on the issue instead. It never opens
++a PR for an unverified patch. The workflow template is `integrations/github/forge0.yml`.
++
+ ## Repository layout
+ 
+ ```text
+ backend/            FastAPI app (api/), agents/, core/ (config, db, models, schemas, logging),
+-                    providers/ (+ mock_scenarios/), sandbox/ (docker, runners, TAP), services/,
+-                    alembic/, tests/
++                    providers/ (+ mock_scenarios/, routing), sandbox/ (docker, runners, TAP,
++                    JUnit), services/, cli/ (forge0-ci), alembic/, tests/
+ frontend/           React dashboard
+-demo/order-management/  TypeScript service with five planted defects (what agents see)
++demo/order-management/  TypeScript service with twelve planted defects (what agents see)
+ demo/defects/       Defect catalog + reference fixes (never shown to agents)
++demo/real-world/    Vendored open-source Python library with a real, upstream-fixed bug (R1)
++integrations/github/  Workflow template and setup guide for forge0-ci
+ benchmarks/         Evaluation harness, hidden tests, results (JSON + HTML)
+ docs/               Architecture, API integration, security, evaluation, submission
+ scripts/            dev.ps1 / dev.sh / stop.ps1, Meta connectivity check, sandbox images

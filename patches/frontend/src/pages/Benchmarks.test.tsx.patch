@@ -1,0 +1,54 @@
+diff --git a/frontend/src/pages/Benchmarks.test.tsx b/frontend/src/pages/Benchmarks.test.tsx
+index 9bf641b..60c373a 100644
+--- a/frontend/src/pages/Benchmarks.test.tsx
++++ b/frontend/src/pages/Benchmarks.test.tsx
+@@ -1,4 +1,4 @@
+-import { render, screen } from '@testing-library/react';
++import { cleanup, render, screen } from '@testing-library/react';
+ import { readFileSync, readdirSync } from 'node:fs';
+ import { join } from 'node:path';
+ import { MemoryRouter } from 'react-router-dom';
+@@ -6,10 +6,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
+ import Benchmarks from './Benchmarks';
+ 
+ const resultsDir = join(__dirname, '../../../benchmarks/results');
+-const latest = readdirSync(resultsDir).filter((f) => f.endsWith('.json')).sort().pop()!;
++// Pinned to a mock run: the newest file may be a real-model or single-system run.
++const latest = readdirSync(resultsDir).filter((f) => f.endsWith('-mock.json')).sort().pop()!;
+ const result = JSON.parse(readFileSync(join(resultsDir, latest), 'utf-8'));
+ 
+-afterEach(() => vi.unstubAllGlobals());
++afterEach(() => {
++  cleanup();
++  vi.unstubAllGlobals();
++});
+ 
+ describe('Benchmarks page', () => {
+   it('renders the latest benchmark result without looping', async () => {
+@@ -30,4 +34,26 @@ describe('Benchmarks page', () => {
+     await new Promise((r) => setTimeout(r, 200));
+     expect(fetchMock.mock.calls.length).toBeLessThan(6);
+   });
++
++  it('renders a run that covers only one system', async () => {
++    const forgeOnly = {
++      ...result,
++      aggregate: { forge: result.aggregate.forge },
++      scenarios: result.scenarios.map((sc: { systems: Record<string, unknown> }) => ({ ...sc, systems: { forge: sc.systems.forge } })),
++    };
++    vi.stubGlobal(
++      'fetch',
++      vi.fn(async (url: string) => {
++        const body = url.endsWith('/benchmarks') ? { runs: [{ file: latest, run_id: result.run_id }] } : forgeOnly;
++        return new Response(JSON.stringify(body), { headers: { 'content-type': 'application/json' } });
++      }),
++    );
++    render(
++      <MemoryRouter>
++        <Benchmarks />
++      </MemoryRouter>,
++    );
++    expect(await screen.findByText(/Per-defect results/)).toBeInTheDocument();
++    expect(screen.queryByText('Baseline A · one-shot')).not.toBeInTheDocument();
++  });
+ });

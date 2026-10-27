@@ -1,0 +1,26 @@
+{
+  "id": "D12-integer-keys",
+  "title": "Cart lines come back in the wrong order",
+  "category": "runtime semantics (property order)",
+  "description": "CartService stores each cart as a plain object keyed by numeric product id. JavaScript enumerates integer-like keys in ascending numeric order before any other key, not in insertion order, so lines() and toOrderItems() list products by id instead of in the order they were added.",
+  "trap": "Recording an insertion sequence and sorting by it in lines() passes every visible test, but toOrderItems() reads the same object directly, so checkout still lists the products by id (hidden tests).",
+  "relevant_files": [
+    "src/services/cartService.ts"
+  ],
+  "reproduction": [
+    "Add SKU-KEYBOARD (3104), SKU-CABLE (87) and SKU-MOUSE (2207) to a cart.",
+    "lines() returns cable, mouse, keyboard."
+  ],
+  "failing_test": {
+    "file": "test/cart.test.ts",
+    "name": "lists lines in the order they were added"
+  },
+  "expected_behavior": "Cart lines and the order items built from them keep the order in which products were first added.",
+  "regression_tests": [
+    "merges repeated additions of the same product",
+    "removes a product from the cart",
+    "rejects unknown products"
+  ],
+  "hidden_tests": "benchmarks/hidden-tests/D12-integer-keys.test.ts",
+  "added": "2026-10-27 (Meta hackathon; pre-registered in benchmarks/preregistration/2026-10-27-harder-defects.md)"
+}

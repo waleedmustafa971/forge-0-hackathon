@@ -1,0 +1,2 @@
+# Keep every byte as committed: patches must apply exactly, and new/ must match the benchmarked tree.
+* -text

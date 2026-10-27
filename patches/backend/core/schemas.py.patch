@@ -1,0 +1,28 @@
+diff --git a/backend/core/schemas.py b/backend/core/schemas.py
+index fe9e1fe..038cb65 100644
+--- a/backend/core/schemas.py
++++ b/backend/core/schemas.py
+@@ -91,6 +91,15 @@ class RuntimeProfile(BaseModel):
+     notes: list[str] = Field(default_factory=list)
+ 
+ 
++class FlakinessReport(BaseModel):
++    """How the target failure behaves when re-run: the first triage step for flaky tests."""
++
++    classification: Literal["deterministic", "intermittent", "order_dependent", "unknown"]
++    isolated_runs: list[str] = Field(default_factory=list, description="target status per isolated re-run")
++    file_run: str | None = Field(default=None, description="target status when its whole file runs alone")
++    summary: str = ""
++
++
+ class InvestigationReport(BaseModel):
+     repository: str
+     file_count: int
+@@ -105,6 +114,7 @@ class InvestigationReport(BaseModel):
+     observed_failures: list[FailureObservation] = Field(default_factory=list)
+     target_failure: FailureObservation | None = None
+     reproduction_confirmed: bool | None = None
++    flakiness: FlakinessReport | None = None
+     relevant_files: list[FileExcerpt] = Field(default_factory=list)
+     notes: list[str] = Field(default_factory=list)
+ 

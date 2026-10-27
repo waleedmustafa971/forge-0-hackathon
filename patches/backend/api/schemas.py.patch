@@ -1,0 +1,13 @@
+diff --git a/backend/api/schemas.py b/backend/api/schemas.py
+index adcff0f..bd74670 100644
+--- a/backend/api/schemas.py
++++ b/backend/api/schemas.py
+@@ -44,7 +44,7 @@ class InvestigationCreate(BaseModel):
+     title: str | None = Field(default=None, max_length=300)
+     symptom: str = Field(default="", max_length=5000)
+     target_test: str | None = Field(default=None, max_length=1000)
+-    mode: Literal["forge", "baseline"] = "forge"
++    mode: Literal["forge", "baseline", "iterative"] = "forge"
+ 
+ 
+ class InvestigationOut(ORM):

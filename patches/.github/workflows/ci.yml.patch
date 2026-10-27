@@ -1,0 +1,35 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index e393841..34fdc68 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -35,6 +35,9 @@ jobs:
+ 
+   backend:
+     name: Backend · lint and unit tests
++    # FORGE-0's own tests use the planted demo defects as fixtures, so a FORGE-0 fix PR (forge0/*,
++    # which repairs one of them and changes nothing else) is checked by the demo contract instead.
++    if: ${{ !startsWith(github.head_ref || github.ref_name, 'forge0/') }}
+     runs-on: ubuntu-latest
+     defaults:
+       run:
+@@ -107,13 +110,18 @@ jobs:
+           node-version: 24
+       - run: npm ci --no-audit --no-fund
+       - run: npm run typecheck
+-      - name: Exactly the five planted defects fail
++      # A FORGE-0 fix PR (branch forge0/*) must repair exactly one planted defect and break nothing.
++      - name: Exactly the twelve planted defects fail (eleven on a FORGE-0 fix PR)
++        env:
++          HEAD_REF: ${{ github.head_ref || github.ref_name }}  # ref_name: dispatched on the branch
+         run: |
+           node --test --test-reporter=tap "test/**/*.test.ts" > tap.txt || true
+           failed=$(grep -cE '^    not ok' tap.txt || true)
+           passed=$(grep -cE '^    ok' tap.txt || true)
+           echo "passed=$passed failed=$failed"
+-          test "$failed" -eq 5 && test "$passed" -eq 14
++          expected=12
++          case "$HEAD_REF" in forge0/*) expected=11 ;; esac
++          test "$failed" -eq "$expected" && test "$passed" -eq $((43 - expected))
+ 
+   security:
+     name: Security · secrets and dependency audit

@@ -1,0 +1,11 @@
+{
+  "defect": "R1-parse-microseconds",
+  "rationale": "Upstream fix ba6803d: read the fractional digits as an integer instead of going through a float.",
+  "edits": [
+    {
+      "file": "parse.py",
+      "search": "                u = int(float(\".\" + u) * 1000000)",
+      "replace": "                u = int(u.ljust(6, \"0\")[:6])"
+    }
+  ]
+}

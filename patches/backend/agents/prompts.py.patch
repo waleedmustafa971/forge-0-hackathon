@@ -1,0 +1,65 @@
+diff --git a/backend/agents/prompts.py b/backend/agents/prompts.py
+index b7a4f01..1daf01f 100644
+--- a/backend/agents/prompts.py
++++ b/backend/agents/prompts.py
+@@ -27,12 +27,21 @@ def runtime_contract(report: InvestigationReport) -> str:
+             "from there, source files are imported as `../../src/...` and existing helpers as `../helpers.ts`.\n"
+             "- No network access, no package installs, 60 second timeout, no dependencies beyond the repository.\n"
+             "- `run` lists the test files to execute; `test_name_pattern` optionally filters test names (regex).\n"
+-            "- An outcome is `fail` if any executed test fails and `pass` if all executed tests pass."
++            "- An outcome is `fail` if any executed test fails and `pass` if all executed tests pass.\n"
++            "- If a promise rejection goes unhandled or an exception is thrown asynchronously while a test runs, "
++            "node:test fails that test with failure type `unhandledRejection` / `uncaughtException`, even if the "
++            "test listens to `process.on('unhandledRejection')`. A hypothesis that implies such a leak must "
++            'predict `fail` with `output_contains: "unhandledRejection"` (failure types and error messages '
++            "of failing tests are part of the observed output)."
+         )
+     return (
+         "Experiment runtime contract (Python, executed in an offline sandbox with pytest):\n"
+-        "- Put new experiment files under `tests/forge_experiments/test_<name>.py`.\n"
+-        "- `run` lists test files; `test_name_pattern` is passed to `pytest -k`."
++        "- Put new experiment files under `tests/forge_experiments/test_<name>.py`; import the package under "
++        "test the same way the existing tests do. Only the standard library and pytest are installed.\n"
++        "- No network access, no package installs, 60 second timeout.\n"
++        "- `run` lists test files; `test_name_pattern` optionally filters tests by a regular expression "
++        "matched against the test function name or node id.\n"
++        "- An outcome is `fail` if any executed test fails and `pass` if all executed tests pass."
+     )
+ 
+ 
+@@ -58,7 +67,9 @@ def _failure_block(report: InvestigationReport) -> str:
+         lines.append(
+             "Stack frames inside the repository:\n" + "\n".join(f"- {s}" for s in target.stack_frames[:12])
+         )
+-    if report.reproduction_confirmed is not None:
++    if report.flakiness is not None:
++        lines.append(f"Re-runs of the target test: {report.flakiness.summary}")
++    elif report.reproduction_confirmed is not None:
+         lines.append(
+             "Isolated re-run of the target test: "
+             + (
+@@ -164,6 +175,24 @@ def repair_prompt(
+     return system, user
+ 
+ 
++def iterative_prompt(
++    report: InvestigationReport, symptom: str, previous_attempts: list[dict[str, Any]]
++) -> tuple[str, str]:
++    """Baseline C: a coding agent's edit -> run tests -> revise loop, without hypotheses or experiments."""
++    system, user = one_shot_prompt(report, symptom)
++    system += (
++        " You are working in a loop: each proposed patch is applied to a copy of the repository and the "
++        "whole test suite is run. If a previous attempt was rejected, use its test results to revise the fix."
++    )
++    if previous_attempts:
++        user += (
++            "\n\nPrevious attempts and their test results:\n```json\n"
++            + json.dumps(previous_attempts, indent=2)
++            + "\n```"
++        )
++    return system, user
++
++
+ def one_shot_prompt(report: InvestigationReport, symptom: str) -> tuple[str, str]:
+     system = (
+         "You are a software engineer. Fix the failing test by editing source code. Express the fix as "

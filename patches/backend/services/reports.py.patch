@@ -1,0 +1,35 @@
+diff --git a/backend/services/reports.py b/backend/services/reports.py
+index 1c3696f..5098ce5 100644
+--- a/backend/services/reports.py
++++ b/backend/services/reports.py
+@@ -176,7 +176,11 @@ def render_markdown(report: dict[str, Any]) -> str:
+     lines += [
+         f"- **Repository:** {inv['repository']}",
+         "- **Mode:** "
+-        + ("System B — hypothesis-driven" if inv["mode"] == "forge" else "Baseline A — one-shot repair"),
++        + {
++            "forge": "System B — hypothesis-driven",
++            "baseline": "Baseline A — one-shot repair",
++            "iterative": "Baseline C — iterative edit-test agent",
++        }.get(inv["mode"], inv["mode"]),
+         f"- **Verdict:** {inv['verdict_text']}",
+         f"- **Provider:** {prov['name']} / {prov['model']}"
+         + (" (**SIMULATED**)" if prov["simulated"] else ""),
+@@ -195,7 +199,7 @@ def render_markdown(report: dict[str, Any]) -> str:
+             str(target.get("error") or ""),
+             "```",
+             "",
+-            f"Reproduced in isolation: **{report.get('reproduced')}**",
++            f"Reproduced: **{report.get('reproduced')}**",
+         ]
+     else:
+         lines.append("No failing test observed.")
+@@ -220,7 +224,7 @@ def render_markdown(report: dict[str, Any]) -> str:
+         if ev.get("detail"):
+             lines.append(f"\n_Result:_ {ev['detail']}")
+         for p in ev.get("predictions") or []:
+-            mark = "✔" if p["matched"] else "✘"
++            mark = "·" if p["matched"] is None else "✔" if p["matched"] else "✘"
+             lines.append(f"- {mark} {p['hypothesis']}: {p['reason']}")
+         if ev.get("errors"):
+             lines.append(f"- rejected before execution: {'; '.join(ev['errors'])}")

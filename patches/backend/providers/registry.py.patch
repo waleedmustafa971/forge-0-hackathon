@@ -1,0 +1,50 @@
+diff --git a/backend/providers/registry.py b/backend/providers/registry.py
+index 8e0fcfe..c474c6a 100644
+--- a/backend/providers/registry.py
++++ b/backend/providers/registry.py
+@@ -10,6 +10,7 @@ from providers.base import AIProvider
+ from providers.meta import MetaModelProvider
+ from providers.mock import MockProvider
+ from providers.openai_compat import OpenAICompatibleProvider
++from providers.routing import RoutingProvider
+ from services.settings_service import RuntimeConfig
+ 
+ log = logging.getLogger(__name__)
+@@ -24,7 +25,26 @@ class ProviderSelection:
+ 
+ def build_provider(config: RuntimeConfig) -> ProviderSelection:
+     settings = get_settings()
+-    requested = config.ai_provider
++    selection = _build_single(config.ai_provider, config)
++    secondary_name = settings.ai_secondary_provider
++    if not secondary_name or secondary_name == config.ai_provider or selection.provider.simulated:
++        return selection
++    tasks = frozenset(t.strip() for t in settings.ai_secondary_tasks.split(",") if t.strip())
++    secondary = _build_single(secondary_name, config, as_secondary=True)
++    if secondary.provider.simulated or not tasks:
++        reason = (
++            f"AI_SECONDARY_PROVIDER={secondary_name} is not usable "
++            f"({secondary.fallback_reason or 'no tasks configured'}); every task uses {config.ai_provider}."
++        )
++        log.warning(reason)
++        return ProviderSelection(selection.provider, selection.requested, reason)
++    return ProviderSelection(
++        RoutingProvider(selection.provider, secondary.provider, tasks), selection.requested
++    )
++
++
++def _build_single(requested: str, config: RuntimeConfig, as_secondary: bool = False) -> ProviderSelection:
++    settings = get_settings()
+     if requested == "meta":
+         if settings.resolved_meta_key is None:
+             reason = "AI_PROVIDER=meta but META_API_KEY is not set; using the mock provider instead."
+@@ -41,6 +61,9 @@ def build_provider(config: RuntimeConfig) -> ProviderSelection:
+         )
+     if requested == "openai":
+         key = settings.openai_compat_api_key
++        if as_secondary and (key is None or not key.get_secret_value().strip()):
++            # (as the primary provider, a keyless OpenAI-compatible server such as Ollama is valid)
++            return ProviderSelection(MockProvider(), requested, "OPENAI_COMPAT_API_KEY is not set")
+         return ProviderSelection(
+             OpenAICompatibleProvider(
+                 name="openai",

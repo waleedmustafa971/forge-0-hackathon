@@ -1,0 +1,37 @@
+diff --git a/frontend/src/components/StartInvestigation.tsx b/frontend/src/components/StartInvestigation.tsx
+index f99496b..56b06b9 100644
+--- a/frontend/src/components/StartInvestigation.tsx
++++ b/frontend/src/components/StartInvestigation.tsx
+@@ -20,7 +20,7 @@ export function StartInvestigation({
+   const [scanning, setScanning] = useState(false);
+   const [target, setTarget] = useState('');
+   const [symptom, setSymptom] = useState('');
+-  const [mode, setMode] = useState<'forge' | 'baseline'>('forge');
++  const [mode, setMode] = useState<'forge' | 'baseline' | 'iterative'>('forge');
+   const [error, setError] = useState<string | null>(null);
+   const [submitting, setSubmitting] = useState(false);
+ 
+@@ -117,7 +117,7 @@ export function StartInvestigation({
+ 
+           <div className="field">
+             <span>Method</span>
+-            <div className="grid grid-2">
++            <div className="grid grid-3">
+               <button
+                 className={`card stat ${mode === 'forge' ? 'selected' : ''}`}
+                 style={{ textAlign: 'left', cursor: 'pointer', borderColor: mode === 'forge' ? 'var(--accent)' : undefined }}
+@@ -134,6 +134,14 @@ export function StartInvestigation({
+                 <strong>Baseline A · one-shot</strong>
+                 <div className="muted small">Direct repair from the failure context; verified afterwards only to measure it.</div>
+               </button>
++              <button
++                className="card stat"
++                style={{ textAlign: 'left', cursor: 'pointer', borderColor: mode === 'iterative' ? 'var(--accent)' : undefined }}
++                onClick={() => setMode('iterative')}
++              >
++                <strong>Baseline C · edit-test loop</strong>
++                <div className="muted small">Patch, run the suite, revise from the test results; no hypotheses or experiments.</div>
++              </button>
+             </div>
+           </div>
+ 

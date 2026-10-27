@@ -1,0 +1,29 @@
+diff --git a/backend/tests/test_benchmark_config.py b/backend/tests/test_benchmark_config.py
+index cad13d4..c15f448 100644
+--- a/backend/tests/test_benchmark_config.py
++++ b/backend/tests/test_benchmark_config.py
+@@ -24,7 +24,7 @@ def test_real_model_config_requires_a_real_provider():
+     assert config["provider"] == "meta" and config["model"] == "muse-spark-1.3"
+     assert config["require_real_provider"] is True
+     assert config["repeats"] >= 3
+-    assert config["systems"] == ["baseline", "forge"] and config["defects"] == []  # all five defects
++    assert config["systems"] == ["baseline", "iterative", "forge"] and config["defects"] == []  # every defect
+ 
+ 
+ def test_mock_config_is_marked_as_not_real():
+@@ -47,8 +47,11 @@ def test_worst_case_cost_for_muse_spark_config_stays_under_its_cap():
+         max_model_calls=config["budgets"]["max_model_calls"], max_tokens=config["max_tokens"]
+     )
+     pricing = SimpleNamespace(ai_price_input_per_m=1.25, ai_price_output_per_m=4.25)
+-    estimate = bench.worst_case_cost(config, 5, runtime, pricing)
+-    # (1 baseline + 16 forge calls) x 5 defects x 3 repeats, two requests each
+-    assert estimate["model_calls"] == 255 and estimate["requests"] == 510
+-    assert estimate["usd"] == pytest.approx(510 * 10_000 / 1e6 * 1.25 + 510 * 8192 / 1e6 * 4.25, abs=0.01)
++    estimate = bench.worst_case_cost(config, 8, runtime, pricing)
++    # (1 baseline + 7 iterative + 16 forge calls) x 8 defects x 3 repeats; per call one truncated
++    # request, a retry at twice the limit and a schema-repair round at that limit
++    assert estimate["model_calls"] == 576 and estimate["requests"] == 1728
++    output = 576 * (8192 + 2 * 16384)
++    assert estimate["usd"] == pytest.approx(1728 * 10_000 / 1e6 * 1.25 + output / 1e6 * 4.25, abs=0.01)
+     assert estimate["usd"] <= config["max_estimated_cost_usd"]
++    assert config["max_spend_usd"] < config["max_estimated_cost_usd"]

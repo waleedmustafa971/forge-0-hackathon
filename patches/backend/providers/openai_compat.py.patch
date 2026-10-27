@@ -1,0 +1,116 @@
+diff --git a/backend/providers/openai_compat.py b/backend/providers/openai_compat.py
+index 1da5fa1..281e12a 100644
+--- a/backend/providers/openai_compat.py
++++ b/backend/providers/openai_compat.py
+@@ -92,6 +92,9 @@ class OpenAICompatibleProvider(AIProvider):
+     RETRYABLE = frozenset({408, 409, 429, 500, 502, 503})
+     MAX_ATTEMPTS = 4
+     MAX_RETRY_AFTER_S = 120.0
++    # Reasoning tokens count toward the output limit, so a long chain of thought can truncate the
++    # answer. A truncated reply is retried once with the limit doubled, capped at this ceiling.
++    MAX_TRUNCATION_TOKENS = 32768
+ 
+     def _headers(self) -> dict[str, str]:
+         headers = {"Content-Type": "application/json", "Accept": "application/json"}
+@@ -190,8 +193,14 @@ class OpenAICompatibleProvider(AIProvider):
+             return {"type": "json_object"}
+         return None
+ 
+-    def _body(self, messages: list[dict[str, str]], schema: type[BaseModel] | None) -> dict[str, Any]:
+-        body: dict[str, Any] = {"model": self.model, "messages": messages, self.token_param: self.max_tokens}
++    def _body(
++        self, messages: list[dict[str, str]], schema: type[BaseModel] | None, max_tokens: int | None = None
++    ) -> dict[str, Any]:
++        body: dict[str, Any] = {
++            "model": self.model,
++            "messages": messages,
++            self.token_param: max_tokens or self.max_tokens,
++        }
+         if self.temperature is not None:
+             body["temperature"] = self.temperature
+         if schema is not None:
+@@ -207,9 +216,11 @@ class OpenAICompatibleProvider(AIProvider):
+         text = f"{exc.param or ''} {exc}".lower()
+         return any(k in text for k in ("response_format", "json_schema", "schema", "structured"))
+ 
+-    def _complete(self, messages: list[dict[str, str]], schema: type[BaseModel]) -> dict[str, Any]:
++    def _complete(
++        self, messages: list[dict[str, str]], schema: type[BaseModel], max_tokens: int
++    ) -> dict[str, Any]:
+         try:
+-            return self._post("/chat/completions", self._body(messages, schema))
++            return self._post("/chat/completions", self._body(messages, schema, max_tokens))
+         except ProviderError as exc:
+             if not self._is_format_rejection(exc):
+                 raise
+@@ -219,7 +230,7 @@ class OpenAICompatibleProvider(AIProvider):
+                 "structured output rejected; downgrading",
+                 extra={"provider": self.name, "from": previous, "to": self.structured_output},
+             )
+-            return self._complete(messages, schema)
++            return self._complete(messages, schema, max_tokens)
+ 
+     # -- AIProvider -------------------------------------------------------------
+     def generate(self, request: AgentRequest, schema: type[T]) -> Completion[T]:
+@@ -230,14 +241,28 @@ class OpenAICompatibleProvider(AIProvider):
+         usage = Usage()
+         started = time.monotonic()
+         last_error = ""
++        limit = self.max_tokens
+ 
+         def fail(message: str) -> ProviderError:
+             usage.latency_ms = int((time.monotonic() - started) * 1000)
+             return ProviderError(message, usage=usage)
+ 
+-        for _validation_attempt in range(2):
++        def raise_limit() -> bool:
++            """Doubles the output limit once after a truncated reply; False if already raised."""
++            nonlocal limit
++            if limit != self.max_tokens or limit >= self.MAX_TRUNCATION_TOKENS:
++                return False
++            previous, limit = limit, min(limit * 2, self.MAX_TRUNCATION_TOKENS)
++            log.warning(
++                "output truncated; retrying with a higher limit",
++                extra={"provider": self.name, "from": previous, "to": limit},
++            )
++            return True
++
++        validation_attempts = 0
++        while validation_attempts < 2:
+             try:
+-                data = self._complete(messages, schema)
++                data = self._complete(messages, schema, limit)
+             except ProviderError as exc:
+                 if usage.requests:
+                     exc.usage = usage
+@@ -259,9 +284,11 @@ class OpenAICompatibleProvider(AIProvider):
+                 if finish == "content_filter":
+                     raise fail(f"{self.name} response was blocked by the content filter")
+                 if finish == "length":
++                    if raise_limit():
++                        continue
+                     raise fail(
+                         f"{self.name} produced no output before reaching max_completion_tokens "
+-                        f"({self.max_tokens}); raise AI_MAX_TOKENS or lower META_REASONING_EFFORT"
++                        f"({limit}); lower META_REASONING_EFFORT or reduce the context"
+                     )
+                 text = ""
+             try:
+@@ -270,11 +297,14 @@ class OpenAICompatibleProvider(AIProvider):
+                 return Completion(output, usage, self.name, data.get("model") or self.model, False, text)
+             except (ValueError, ValidationError) as exc:
+                 if finish == "length":
+-                    # A correction request would be truncated again; fail with a precise hint.
++                    # A correction request would be truncated again; retry with more room instead.
++                    if raise_limit():
++                        continue
+                     raise fail(
+-                        f"{self.name} output was truncated at max_completion_tokens ({self.max_tokens}); "
+-                        "raise AI_MAX_TOKENS or lower META_REASONING_EFFORT"
++                        f"{self.name} output was truncated at max_completion_tokens ({limit}); "
++                        "lower META_REASONING_EFFORT or reduce the context"
+                     ) from exc
++                validation_attempts += 1
+                 last_error = str(exc)[:1500]
+                 messages += [
+                     {"role": "assistant", "content": text[:8000]},

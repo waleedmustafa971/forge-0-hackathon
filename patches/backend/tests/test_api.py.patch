@@ -1,0 +1,28 @@
+diff --git a/backend/tests/test_api.py b/backend/tests/test_api.py
+index c811439..c1b334c 100644
+--- a/backend/tests/test_api.py
++++ b/backend/tests/test_api.py
+@@ -220,3 +220,23 @@ def test_wait_for_database_retries_until_reachable(monkeypatch):
+     calls["n"] = -100
+     with pytest.raises(OperationalError):
+         database.wait_for_database(timeout_s=0.05, interval_s=0.01)
++
++
++def test_latest_benchmark_is_the_newest_comparison_and_routed_runs_open(client, tmp_path, monkeypatch):
++    import json
++
++    from api.routes import system
++
++    results = tmp_path / "benchmarks" / "results"
++    results.mkdir(parents=True)
++    runs = {
++        "20261027-101729-meta": {"baseline": {}, "forge": {}},
++        "20261027-103750-meta+openai": {"forge": {}},  # newer, but a single-system smoke run
++    }
++    for run_id, aggregate in runs.items():
++        (results / f"{run_id}.json").write_text(json.dumps({"run_id": run_id, "aggregate": aggregate}))
++    monkeypatch.setattr(system, "REPO_ROOT", tmp_path)
++
++    assert client.get("/api/benchmarks/latest").json()["run_id"] == "20261027-101729-meta"
++    assert client.get("/api/benchmarks/20261027-103750-meta+openai").json()["run_id"].endswith("+openai")
++    assert client.get("/api/benchmarks/..%2Fsecrets").status_code in (400, 404)

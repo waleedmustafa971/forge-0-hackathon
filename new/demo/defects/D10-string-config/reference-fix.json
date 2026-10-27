@@ -1,0 +1,11 @@
+{
+  "defect": "D10-string-config",
+  "rationale": "Parse and validate every numeric fee when the configuration is loaded, so a quoted value in the JSON can never reach arithmetic as a string.",
+  "edits": [
+    {
+      "file": "src/config/fees.ts",
+      "search": "  return JSON.parse(readFileSync(file, 'utf8')) as Fees;\n}",
+      "replace": "  const raw = JSON.parse(readFileSync(file, 'utf8')) as Record<keyof Fees, unknown>;\n  const amount = (name: keyof Fees): number => {\n    const value = typeof raw[name] === 'string' ? Number(raw[name]) : raw[name];\n    if (typeof value !== 'number' || !Number.isFinite(value)) {\n      throw new Error(`config/fees.json: ${name} must be a number, got ${JSON.stringify(raw[name])}`);\n    }\n    return value;\n  };\n  return {\n    handlingFee: amount('handlingFee'),\n    giftWrapFee: amount('giftWrapFee'),\n    freeHandlingThreshold: amount('freeHandlingThreshold'),\n  };\n}"
+    }
+  ]
+}

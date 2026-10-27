@@ -1,0 +1,25 @@
+{
+  "name": "open-weights-muse-spark-open",
+  "description": "Pre-registered arm B (benchmarks/preregistration/2026-10-27-harder-defects.md): Muse Spark Open (open weights, OpenAI-compatible endpoint such as Baseten) as the only model, every defect, edit-test loop vs FORGE-0. Requires OPENAI_COMPAT_API_KEY/BASE_URL/MODEL.",
+  "provider": "openai",
+  "model": "meta-models/muse-spark-open-1026",
+  "max_tokens": 8192,
+  "temperature": 0.2,
+  "systems": [
+    "iterative",
+    "forge"
+  ],
+  "defects": [],
+  "repeats": 3,
+  "require_real_provider": true,
+  "max_estimated_cost_usd": 250,
+  "max_spend_usd": 25,
+  "budgets": {
+    "max_model_calls": 16,
+    "max_experiments": 8,
+    "max_repair_attempts": 3,
+    "max_experiment_rounds": 3,
+    "time_budget_s": 1800
+  },
+  "notes": "Structured output for this provider comes from OPENAI_COMPAT_STRUCTURED_OUTPUT (json_object on Baseten)."
+}

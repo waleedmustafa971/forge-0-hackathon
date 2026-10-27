@@ -1,0 +1,1439 @@
+{
+  "run_id": "20261027-115421-meta",
+  "created_at": "2026-10-27T11:54:21.746650+00:00",
+  "config": {
+    "name": "harder-muse-spark-1.3",
+    "description": "Pre-registered arm A (benchmarks/preregistration/2026-10-27-harder-defects.md): the harder defects D10-D12 with Muse Spark 1.3, all three systems.",
+    "provider": "meta",
+    "model": "muse-spark-1.3",
+    "reasoning_effort": "medium",
+    "structured_output": "json_schema",
+    "max_tokens": 8192,
+    "temperature": 0.2,
+    "systems": [
+      "baseline",
+      "iterative",
+      "forge"
+    ],
+    "defects": [
+      "D10-string-config",
+      "D11-closure-dedupe",
+      "D12-integer-keys"
+    ],
+    "repeats": 3,
+    "require_real_provider": true,
+    "max_estimated_cost_usd": 80,
+    "max_spend_usd": 10,
+    "budgets": {
+      "max_model_calls": 16,
+      "max_experiments": 8,
+      "max_repair_attempts": 3,
+      "max_experiment_rounds": 3,
+      "time_budget_s": 1800
+    }
+  },
+  "provider": "meta",
+  "model": "muse-spark-1.3",
+  "simulated": false,
+  "disclaimer": "Real-model evaluation: every model output came from the configured provider; all executions, verifications and hidden-test evaluations were run in the sandbox. Small sample (9 defects) - treat rates as indicative, not statistically significant.",
+  "repeats": 3,
+  "sandbox": {
+    "docker": "wsl -- docker",
+    "server_version": "29.9.0"
+  },
+  "pricing_usd_per_million": {
+    "input": 1.25,
+    "cached_input": 0.15,
+    "output": 4.25,
+    "note": "Muse Spark 1.3 standard-mode list price; for mock runs the cost is hypothetical"
+  },
+  "worst_case_estimate": {
+    "model_calls": 216,
+    "requests": 648,
+    "input_tokens": 6480000,
+    "output_tokens": 8847360,
+    "usd": 45.7,
+    "assumptions": "every call hits the model-call budget, is truncated once, uses a schema-repair round, sends 10,000 prompt tokens and fills every output limit; no cache discount"
+  },
+  "spent_usd": 1.0226,
+  "stopped_early": null,
+  "metric_definitions": {
+    "reproduction_rate": "Share of runs whose target test failed again when re-run in isolation",
+    "verified_repair_rate": "Share of runs whose claimed patch passes the target test, the hidden tests and every previously passing test on a fresh copy (independent evaluation)",
+    "false_positive_rate": "Claimed fixes that the independent evaluation shows are not fixes, divided by claimed fixes",
+    "regression_failures": "Claimed fixes that break at least one previously passing test",
+    "claimed_fixed": "Baseline A always claims its one-shot patch; System B claims only verifier-approved patches"
+  },
+  "scenarios": [
+    {
+      "defect": "D10-string-config",
+      "title": "Small-order quotes come out as NaN",
+      "category": "runtime configuration",
+      "target_test": "adds the handling fee to small orders",
+      "repeat": 1,
+      "systems": {
+        "baseline": {
+          "investigation_id": "a04ccfa570da43f9bc6359cd419179bc",
+          "status": "completed",
+          "verdict": "verified_fix",
+          "error": null,
+          "reproduced": true,
+          "claimed_fixed": true,
+          "verifier_verdict": "verified",
+          "experiments": 0,
+          "patch_attempts": 1,
+          "duration_s": 51.82,
+          "model_calls": 1,
+          "failed_model_calls": 0,
+          "prompt_tokens": 6328,
+          "completion_tokens": 4629,
+          "cached_tokens": 0,
+          "reasoning_tokens": 3913,
+          "total_tokens": 10957,
+          "tokens_estimated": false,
+          "estimated_cost_usd": 0.027583,
+          "simulated": false,
+          "provider": "meta",
+          "model": "muse-spark-1.3",
+          "calls_by_model": {
+            "meta/muse-spark-1.3": {
+              "one_shot_repair": 1
+            }
+          },
+          "message": "Baseline A applied its one-shot patch without experiments; the verifier was run afterwards only to measure it: Target test passes (3/3 runs); 1 fixed, 0 regressions, 31 unchanged passing, 11 unrelated still failing",
+          "evaluation": {
+            "applied": true,
+            "target_passed": true,
+            "hidden_tests": 3,
+            "hidden_tests_passed": true,
+            "regressions": 0,
+            "regression_names": [],
+            "actually_fixed": true
+          },
+          "hidden_tests_passed": true,
+          "actually_fixed": true,
+          "regressions": 0,
+          "false_positive": false
+        },
+        "iterative": {
+          "investigation_id": "36a88d2734f444c19eff8738affa0ea7",
+          "status": "completed",
+          "verdict": "verified_fix",
+          "error": null,
+          "reproduced": true,
+          "claimed_fixed": true,
+          "verifier_verdict": "verified",
+          "experiments": 0,
+          "patch_attempts": 1,
+          "duration_s": 41.8,
+          "model_calls": 1,
+          "failed_model_calls": 0,
+          "prompt_tokens": 6370,
+          "completion_tokens": 3482,
+          "cached_tokens": 369,
+          "reasoning_tokens": 3081,
+          "total_tokens": 9852,
+          "tokens_estimated": false,
+          "estimated_cost_usd": 0.022355,
+          "simulated": false,
+          "provider": "meta",
+          "model": "muse-spark-1.3",
+          "calls_by_model": {
+            "meta/muse-spark-1.3": {
+              "one_shot_repair": 1
+            }
+          },
+          "message": "Baseline C's patch P1 passed the test suite after 1 edit-test iteration(s): Target test passes (3/3 runs); 1 fixed, 0 regressions, 31 unchanged passing, 11 unrelated still failing",
+          "evaluation": {
+            "applied": true,
+            "target_passed": true,
+            "hidden_tests": 3,
+            "hidden_tests_passed": true,
+            "regressions": 0,
+            "regression_names": [],
+            "actually_fixed": true
+          },
+          "hidden_tests_passed": true,
+          "actually_fixed": true,
+          "regressions": 0,
+          "false_positive": false
+        },
+        "forge": {
+          "investigation_id": "bb4f55983a4b43e6b055c75f603b5442",
+          "status": "completed",
+          "verdict": "verified_fix",
+          "error": null,
+          "reproduced": true,
+          "claimed_fixed": true,
+          "verifier_verdict": "verified",
+          "experiments": 4,
+          "patch_attempts": 1,
+          "duration_s": 68.71,
+          "model_calls": 3,
+          "failed_model_calls": 0,
+          "prompt_tokens": 21992,
+          "completion_tokens": 8918,
+          "cached_tokens": 0,
+          "reasoning_tokens": 6320,
+          "total_tokens": 30910,
+          "tokens_estimated": false,
+          "estimated_cost_usd": 0.065392,
+          "simulated": false,
+          "provider": "meta",
+          "model": "muse-spark-1.3",
+          "calls_by_model": {
+            "meta/muse-spark-1.3": {
+              "hypotheses": 1,
+              "experiments": 1,
+              "repair": 1
+            }
+          },
+          "message": "Patch P1 verified: Target test passes (3/3 runs); 1 fixed, 0 regressions, 31 unchanged passing, 11 unrelated still failing",
+          "evaluation": {
+            "applied": true,
+            "target_passed": true,
+            "hidden_tests": 3,
+            "hidden_tests_passed": true,
+            "regressions": 0,
+            "regression_names": [],
+            "actually_fixed": true
+          },
+          "hidden_tests_passed": true,
+          "actually_fixed": true,
+          "regressions": 0,
+          "false_positive": false
+        }
+      }
+    },
+    {
+      "defect": "D11-closure-dedupe",
+      "title": "Loyalty points are awarded more than once from the second order on",
+      "category": "event wiring / object identity",
+      "target_test": "awards loyalty points once per completed order",
+      "repeat": 1,
+      "systems": {
+        "baseline": {
+          "investigation_id": "2dc9030ba72047d1a94cb570016269b7",
+          "status": "completed",
+          "verdict": "verified_fix",
+          "error": null,
+          "reproduced": true,
+          "claimed_fixed": true,
+          "verifier_verdict": "verified",
+          "experiments": 0,
+          "patch_attempts": 1,
+          "duration_s": 37.25,
+          "model_calls": 1,
+          "failed_model_calls": 0,
+          "prompt_tokens": 6734,
+          "completion_tokens": 3030,
+          "cached_tokens": 0,
+          "reasoning_tokens": 2473,
+          "total_tokens": 9764,
+          "tokens_estimated": false,
+          "estimated_cost_usd": 0.021295,
+          "simulated": false,
+          "provider": "meta",
+          "model": "muse-spark-1.3",
+          "calls_by_model": {
+            "meta/muse-spark-1.3": {
+              "one_shot_repair": 1
+            }
+          },
+          "message": "Baseline A applied its one-shot patch without experiments; the verifier was run afterwards only to measure it: Target test passes (3/3 runs); 1 fixed, 0 regressions, 31 unchanged passing, 11 unrelated still failing",
+          "evaluation": {
+            "applied": true,
+            "target_passed": true,
+            "hidden_tests": 3,
+            "hidden_tests_passed": true,
+            "regressions": 0,
+            "regression_names": [],
+            "actually_fixed": true
+          },
+          "hidden_tests_passed": true,
+          "actually_fixed": true,
+          "regressions": 0,
+          "false_positive": false
+        },
+        "iterative": {
+          "investigation_id": "efa56a6318a2437a97fcf04c98b4c657",
+          "status": "completed",
+          "verdict": "verified_fix",
+          "error": null,
+          "reproduced": true,
+          "claimed_fixed": true,
+          "verifier_verdict": "verified",
+          "experiments": 0,
+          "patch_attempts": 1,
+          "duration_s": 36.1,
+          "model_calls": 1,
+          "failed_model_calls": 0,
+          "prompt_tokens": 6776,
+          "completion_tokens": 2569,
+          "cached_tokens": 113,
+          "reasoning_tokens": 2179,
+          "total_tokens": 9345,
+          "tokens_estimated": false,
+          "estimated_cost_usd": 0.019264,
+          "simulated": false,
+          "provider": "meta",
+          "model": "muse-spark-1.3",
+          "calls_by_model": {
+            "meta/muse-spark-1.3": {
+              "one_shot_repair": 1
+            }
+          },
+          "message": "Baseline C's patch P1 passed the test suite after 1 edit-test iteration(s): Target test passes (3/3 runs); 1 fixed, 0 regressions, 31 unchanged passing, 11 unrelated still failing",
+          "evaluation": {
+            "applied": true,
+            "target_passed": true,
+            "hidden_tests": 3,
+            "hidden_tests_passed": true,
+            "regressions": 0,
+            "regression_names": [],
+            "actually_fixed": true
+          },
+          "hidden_tests_passed": true,
+          "actually_fixed": true,
+          "regressions": 0,
+          "false_positive": false
+        },
+        "forge": {
+          "investigation_id": "5a3ff7f8ee6c44d485448717a6a75501",
+          "status": "completed",
+          "verdict": "verified_fix",
+          "error": null,
+          "reproduced": true,
+          "claimed_fixed": true,
+          "verifier_verdict": "verified",
+          "experiments": 4,
+          "patch_attempts": 1,
+          "duration_s": 67.54,
+          "model_calls": 3,
+          "failed_model_calls": 0,
+          "prompt_tokens": 23268,
+          "completion_tokens": 9790,
+          "cached_tokens": 0,
+          "reasoning_tokens": 6111,
+          "total_tokens": 33058,
+          "tokens_estimated": false,
+          "estimated_cost_usd": 0.070692,
+          "simulated": false,
+          "provider": "meta",
+          "model": "muse-spark-1.3",
+          "calls_by_model": {
+            "meta/muse-spark-1.3": {
+              "hypotheses": 1,
+              "experiments": 1,
+              "repair": 1
+            }
+          },
+          "message": "Patch P1 verified: Target test passes (3/3 runs); 1 fixed, 0 regressions, 31 unchanged passing, 11 unrelated still failing",
+          "evaluation": {
+            "applied": true,
+            "target_passed": true,
+            "hidden_tests": 3,
+            "hidden_tests_passed": true,
+            "regressions": 0,
+            "regression_names": [],
+            "actually_fixed": true
+          },
+          "hidden_tests_passed": true,
+          "actually_fixed": true,
+          "regressions": 0,
+          "false_positive": false
+        }
+      }
+    },
+    {
+      "defect": "D12-integer-keys",
+      "title": "Cart lines come back in the wrong order",
+      "category": "runtime semantics (property order)",
+      "target_test": "lists lines in the order they were added",
+      "repeat": 1,
+      "systems": {
+        "baseline": {
+          "investigation_id": "0cf2db96c17842d79c21eff5a8150685",
+          "status": "completed",
+          "verdict": "verified_fix",
+          "error": null,
+          "reproduced": true,
+          "claimed_fixed": true,
+          "verifier_verdict": "verified",
+          "experiments": 0,
+          "patch_attempts": 1,
+          "duration_s": 33.76,
+          "model_calls": 1,
+          "failed_model_calls": 0,
+          "prompt_tokens": 6632,
+          "completion_tokens": 2122,
+          "cached_tokens": 0,
+          "reasoning_tokens": 1123,
+          "total_tokens": 8754,
+          "tokens_estimated": false,
+          "estimated_cost_usd": 0.017309,
+          "simulated": false,
+          "provider": "meta",
+          "model": "muse-spark-1.3",
+          "calls_by_model": {
+            "meta/muse-spark-1.3": {
+              "one_shot_repair": 1
+            }
+          },
+          "message": "Baseline A applied its one-shot patch without experiments; the verifier was run afterwards only to measure it: Target test passes (3/3 runs); 1 fixed, 0 regressions, 31 unchanged passing, 11 unrelated still failing",
+          "evaluation": {
+            "applied": true,
+            "target_passed": true,
+            "hidden_tests": 3,
+            "hidden_tests_passed": true,
+            "regressions": 0,
+            "regression_names": [],
+            "actually_fixed": true
+          },
+          "hidden_tests_passed": true,
+          "actually_fixed": true,
+          "regressions": 0,
+          "false_positive": false
+        },
+        "iterative": {
+          "investigation_id": "e8e5b7c347c6479091b1f59a2d5087e8",
+          "status": "completed",
+          "verdict": "verified_fix",
+          "error": null,
+          "reproduced": true,
+          "claimed_fixed": true,
+          "verifier_verdict": "verified",
+          "experiments": 0,
+          "patch_attempts": 1,
+          "duration_s": 29.95,
+          "model_calls": 1,
+          "failed_model_calls": 0,
+          "prompt_tokens": 6674,
+          "completion_tokens": 1891,
+          "cached_tokens": 497,
+          "reasoning_tokens": 1280,
+          "total_tokens": 8565,
+          "tokens_estimated": false,
+          "estimated_cost_usd": 0.015833,
+          "simulated": false,
+          "provider": "meta",
+          "model": "muse-spark-1.3",
+          "calls_by_model": {
+            "meta/muse-spark-1.3": {
+              "one_shot_repair": 1
+            }
+          },
+          "message": "Baseline C's patch P1 passed the test suite after 1 edit-test iteration(s): Target test passes (3/3 runs); 1 fixed, 0 regressions, 31 unchanged passing, 11 unrelated still failing",
+          "evaluation": {
+            "applied": true,
+            "target_passed": true,
+            "hidden_tests": 3,
+            "hidden_tests_passed": true,
+            "regressions": 0,
+            "regression_names": [],
+            "actually_fixed": true
+          },
+          "hidden_tests_passed": true,
+          "actually_fixed": true,
+          "regressions": 0,
+          "false_positive": false
+        },
+        "forge": {
+          "investigation_id": "d561b43a2f8a497992e4900eea6038c5",
+          "status": "completed",
+          "verdict": "verified_fix",
+          "error": null,
+          "reproduced": true,
+          "claimed_fixed": true,
+          "verifier_verdict": "verified",
+          "experiments": 3,
+          "patch_attempts": 1,
+          "duration_s": 66.99,
+          "model_calls": 3,
+          "failed_model_calls": 0,
+          "prompt_tokens": 22734,
+          "completion_tokens": 9177,
+          "cached_tokens": 0,
+          "reasoning_tokens": 5946,
+          "total_tokens": 31911,
+          "tokens_estimated": false,
+          "estimated_cost_usd": 0.06742,
+          "simulated": false,
+          "provider": "meta",
+          "model": "muse-spark-1.3",
+          "calls_by_model": {
+            "meta/muse-spark-1.3": {
+              "hypotheses": 1,
+              "experiments": 1,
+              "repair": 1
+            }
+          },
+          "message": "Patch P1 verified: Target test passes (3/3 runs); 1 fixed, 0 regressions, 31 unchanged passing, 11 unrelated still failing",
+          "evaluation": {
+            "applied": true,
+            "target_passed": true,
+            "hidden_tests": 3,
+            "hidden_tests_passed": true,
+            "regressions": 0,
+            "regression_names": [],
+            "actually_fixed": true
+          },
+          "hidden_tests_passed": true,
+          "actually_fixed": true,
+          "regressions": 0,
+          "false_positive": false
+        }
+      }
+    },
+    {
+      "defect": "D10-string-config",
+      "title": "Small-order quotes come out as NaN",
+      "category": "runtime configuration",
+      "target_test": "adds the handling fee to small orders",
+      "repeat": 2,
+      "systems": {
+        "baseline": {
+          "investigation_id": "cb00d8b5d4bf4975a504d656e083c36f",
+          "status": "completed",
+          "verdict": "verified_fix",
+          "error": null,
+          "reproduced": true,
+          "claimed_fixed": true,
+          "verifier_verdict": "verified",
+          "experiments": 0,
+          "patch_attempts": 1,
+          "duration_s": 39.75,
+          "model_calls": 1,
+          "failed_model_calls": 0,
+          "prompt_tokens": 6328,
+          "completion_tokens": 3171,
+          "cached_tokens": 6257,
+          "reasoning_tokens": 2713,
+          "total_tokens": 9499,
+          "tokens_estimated": false,
+          "estimated_cost_usd": 0.014504,
+          "simulated": false,
+          "provider": "meta",
+          "model": "muse-spark-1.3",
+          "calls_by_model": {
+            "meta/muse-spark-1.3": {
+              "one_shot_repair": 1
+            }
+          },
+          "message": "Baseline A applied its one-shot patch without experiments; the verifier was run afterwards only to measure it: Target test passes (3/3 runs); 1 fixed, 0 regressions, 31 unchanged passing, 11 unrelated still failing",
+          "evaluation": {
+            "applied": true,
+            "target_passed": true,
+            "hidden_tests": 3,
+            "hidden_tests_passed": true,
+            "regressions": 0,
+            "regression_names": [],
+            "actually_fixed": true
+          },
+          "hidden_tests_passed": true,
+          "actually_fixed": true,
+          "regressions": 0,
+          "false_positive": false
+        },
+        "iterative": {
+          "investigation_id": "2a8f537e478e42169f1a5c867bacdc2c",
+          "status": "completed",
+          "verdict": "verified_fix",
+          "error": null,
+          "reproduced": true,
+          "claimed_fixed": true,
+          "verifier_verdict": "verified",
+          "experiments": 0,
+          "patch_attempts": 1,
+          "duration_s": 42.05,
+          "model_calls": 1,
+          "failed_model_calls": 0,
+          "prompt_tokens": 6370,
+          "completion_tokens": 4827,
+          "cached_tokens": 0,
+          "reasoning_tokens": 4306,
+          "total_tokens": 11197,
+          "tokens_estimated": false,
+          "estimated_cost_usd": 0.028477,
+          "simulated": false,
+          "provider": "meta",
+          "model": "muse-spark-1.3",
+          "calls_by_model": {
+            "meta/muse-spark-1.3": {
+              "one_shot_repair": 1
+            }
+          },
+          "message": "Baseline C's patch P1 passed the test suite after 1 edit-test iteration(s): Target test passes (3/3 runs); 1 fixed, 0 regressions, 31 unchanged passing, 11 unrelated still failing",
+          "evaluation": {
+            "applied": true,
+            "target_passed": true,
+            "hidden_tests": 3,
+            "hidden_tests_passed": true,
+            "regressions": 0,
+            "regression_names": [],
+            "actually_fixed": true
+          },
+          "hidden_tests_passed": true,
+          "actually_fixed": true,
+          "regressions": 0,
+          "false_positive": false
+        },
+        "forge": {
+          "investigation_id": "811b6e096111485d9304999b8151f48e",
+          "status": "completed",
+          "verdict": "verified_fix",
+          "error": null,
+          "reproduced": true,
+          "claimed_fixed": true,
+          "verifier_verdict": "verified",
+          "experiments": 3,
+          "patch_attempts": 1,
+          "duration_s": 56.63,
+          "model_calls": 3,
+          "failed_model_calls": 0,
+          "prompt_tokens": 21731,
+          "completion_tokens": 7971,
+          "cached_tokens": 0,
+          "reasoning_tokens": 5676,
+          "total_tokens": 29702,
+          "tokens_estimated": false,
+          "estimated_cost_usd": 0.061041,
+          "simulated": false,
+          "provider": "meta",
+          "model": "muse-spark-1.3",
+          "calls_by_model": {
+            "meta/muse-spark-1.3": {
+              "hypotheses": 1,
+              "experiments": 1,
+              "repair": 1
+            }
+          },
+          "message": "Patch P1 verified: Target test passes (3/3 runs); 1 fixed, 0 regressions, 31 unchanged passing, 11 unrelated still failing",
+          "evaluation": {
+            "applied": true,
+            "target_passed": true,
+            "hidden_tests": 3,
+            "hidden_tests_passed": true,
+            "regressions": 0,
+            "regression_names": [],
+            "actually_fixed": true
+          },
+          "hidden_tests_passed": true,
+          "actually_fixed": true,
+          "regressions": 0,
+          "false_positive": false
+        }
+      }
+    },
+    {
+      "defect": "D11-closure-dedupe",
+      "title": "Loyalty points are awarded more than once from the second order on",
+      "category": "event wiring / object identity",
+      "target_test": "awards loyalty points once per completed order",
+      "repeat": 2,
+      "systems": {
+        "baseline": {
+          "investigation_id": "43141ac0be974aafaa359baa69ddabf0",
+          "status": "completed",
+          "verdict": "verified_fix",
+          "error": null,
+          "reproduced": true,
+          "claimed_fixed": true,
+          "verifier_verdict": "verified",
+          "experiments": 0,
+          "patch_attempts": 1,
+          "duration_s": 31.5,
+          "model_calls": 1,
+          "failed_model_calls": 0,
+          "prompt_tokens": 6734,
+          "completion_tokens": 2427,
+          "cached_tokens": 6641,
+          "reasoning_tokens": 1838,
+          "total_tokens": 9161,
+          "tokens_estimated": false,
+          "estimated_cost_usd": 0.011427,
+          "simulated": false,
+          "provider": "meta",
+          "model": "muse-spark-1.3",
+          "calls_by_model": {
+            "meta/muse-spark-1.3": {
+              "one_shot_repair": 1
+            }
+          },
+          "message": "Baseline A applied its one-shot patch without experiments; the verifier was run afterwards only to measure it: Target test passes (3/3 runs); 1 fixed, 0 regressions, 31 unchanged passing, 11 unrelated still failing",
+          "evaluation": {
+            "applied": true,
+            "target_passed": true,
+            "hidden_tests": 3,
+            "hidden_tests_passed": true,
+            "regressions": 0,
+            "regression_names": [],
+            "actually_fixed": true
+          },
+          "hidden_tests_passed": true,
+          "actually_fixed": true,
+          "regressions": 0,
+          "false_positive": false
+        },
+        "iterative": {
+          "investigation_id": "62aef270f1a643028c408c1e32471c24",
+          "status": "completed",
+          "verdict": "verified_fix",
+          "error": null,
+          "reproduced": true,
+          "claimed_fixed": true,
+          "verifier_verdict": "verified",
+          "experiments": 0,
+          "patch_attempts": 2,
+          "duration_s": 57.59,
+          "model_calls": 2,
+          "failed_model_calls": 0,
+          "prompt_tokens": 13990,
+          "completion_tokens": 4336,
+          "cached_tokens": 6769,
+          "reasoning_tokens": 3535,
+          "total_tokens": 18326,
+          "tokens_estimated": false,
+          "estimated_cost_usd": 0.02847,
+          "simulated": false,
+          "provider": "meta",
+          "model": "muse-spark-1.3",
+          "calls_by_model": {
+            "meta/muse-spark-1.3": {
+              "one_shot_repair": 1,
+              "iterative_repair": 1
+            }
+          },
+          "message": "Baseline C's patch P2 passed the test suite after 2 edit-test iteration(s): Target test passes (3/3 runs); 1 fixed, 0 regressions, 31 unchanged passing, 11 unrelated still failing",
+          "evaluation": {
+            "applied": true,
+            "target_passed": true,
+            "hidden_tests": 3,
+            "hidden_tests_passed": true,
+            "regressions": 0,
+            "regression_names": [],
+            "actually_fixed": true
+          },
+          "hidden_tests_passed": true,
+          "actually_fixed": true,
+          "regressions": 0,
+          "false_positive": false
+        },
+        "forge": {
+          "investigation_id": "0d11691c754643359dc6e623dcf25f9f",
+          "status": "completed",
+          "verdict": "verified_fix",
+          "error": null,
+          "reproduced": true,
+          "claimed_fixed": true,
+          "verifier_verdict": "verified",
+          "experiments": 3,
+          "patch_attempts": 1,
+          "duration_s": 71.93,
+          "model_calls": 3,
+          "failed_model_calls": 0,
+          "prompt_tokens": 23115,
+          "completion_tokens": 11799,
+          "cached_tokens": 0,
+          "reasoning_tokens": 8850,
+          "total_tokens": 34914,
+          "tokens_estimated": false,
+          "estimated_cost_usd": 0.079039,
+          "simulated": false,
+          "provider": "meta",
+          "model": "muse-spark-1.3",
+          "calls_by_model": {
+            "meta/muse-spark-1.3": {
+              "hypotheses": 1,
+              "experiments": 1,
+              "repair": 1
+            }
+          },
+          "message": "Patch P1 verified: Target test passes (3/3 runs); 1 fixed, 0 regressions, 31 unchanged passing, 11 unrelated still failing",
+          "evaluation": {
+            "applied": true,
+            "target_passed": true,
+            "hidden_tests": 3,
+            "hidden_tests_passed": true,
+            "regressions": 0,
+            "regression_names": [],
+            "actually_fixed": true
+          },
+          "hidden_tests_passed": true,
+          "actually_fixed": true,
+          "regressions": 0,
+          "false_positive": false
+        }
+      }
+    },
+    {
+      "defect": "D12-integer-keys",
+      "title": "Cart lines come back in the wrong order",
+      "category": "runtime semantics (property order)",
+      "target_test": "lists lines in the order they were added",
+      "repeat": 2,
+      "systems": {
+        "baseline": {
+          "investigation_id": "8c8c08df277c465ab48e4420c7c782fc",
+          "status": "completed",
+          "verdict": "verified_fix",
+          "error": null,
+          "reproduced": true,
+          "claimed_fixed": true,
+          "verifier_verdict": "verified",
+          "experiments": 0,
+          "patch_attempts": 1,
+          "duration_s": 31.86,
+          "model_calls": 1,
+          "failed_model_calls": 0,
+          "prompt_tokens": 6632,
+          "completion_tokens": 1815,
+          "cached_tokens": 0,
+          "reasoning_tokens": 1092,
+          "total_tokens": 8447,
+          "tokens_estimated": false,
+          "estimated_cost_usd": 0.016004,
+          "simulated": false,
+          "provider": "meta",
+          "model": "muse-spark-1.3",
+          "calls_by_model": {
+            "meta/muse-spark-1.3": {
+              "one_shot_repair": 1
+            }
+          },
+          "message": "Baseline A applied its one-shot patch without experiments; the verifier was run afterwards only to measure it: Target test passes (3/3 runs); 1 fixed, 0 regressions, 31 unchanged passing, 11 unrelated still failing",
+          "evaluation": {
+            "applied": true,
+            "target_passed": true,
+            "hidden_tests": 3,
+            "hidden_tests_passed": true,
+            "regressions": 0,
+            "regression_names": [],
+            "actually_fixed": true
+          },
+          "hidden_tests_passed": true,
+          "actually_fixed": true,
+          "regressions": 0,
+          "false_positive": false
+        },
+        "iterative": {
+          "investigation_id": "79e547e6bfb64656a71a6033ab59d653",
+          "status": "completed",
+          "verdict": "verified_fix",
+          "error": null,
+          "reproduced": true,
+          "claimed_fixed": true,
+          "verifier_verdict": "verified",
+          "experiments": 0,
+          "patch_attempts": 1,
+          "duration_s": 31.37,
+          "model_calls": 1,
+          "failed_model_calls": 0,
+          "prompt_tokens": 6674,
+          "completion_tokens": 2607,
+          "cached_tokens": 6641,
+          "reasoning_tokens": 1633,
+          "total_tokens": 9281,
+          "tokens_estimated": false,
+          "estimated_cost_usd": 0.012117,
+          "simulated": false,
+          "provider": "meta",
+          "model": "muse-spark-1.3",
+          "calls_by_model": {
+            "meta/muse-spark-1.3": {
+              "one_shot_repair": 1
+            }
+          },
+          "message": "Baseline C's patch P1 passed the test suite after 1 edit-test iteration(s): Target test passes (3/3 runs); 1 fixed, 0 regressions, 31 unchanged passing, 11 unrelated still failing",
+          "evaluation": {
+            "applied": true,
+            "target_passed": true,
+            "hidden_tests": 3,
+            "hidden_tests_passed": true,
+            "regressions": 0,
+            "regression_names": [],
+            "actually_fixed": true
+          },
+          "hidden_tests_passed": true,
+          "actually_fixed": true,
+          "regressions": 0,
+          "false_positive": false
+        },
+        "forge": {
+          "investigation_id": "cb09bbe01021422ba1301408daf5c198",
+          "status": "completed",
+          "verdict": "verified_fix",
+          "error": null,
+          "reproduced": true,
+          "claimed_fixed": true,
+          "verifier_verdict": "verified",
+          "experiments": 3,
+          "patch_attempts": 1,
+          "duration_s": 67.36,
+          "model_calls": 3,
+          "failed_model_calls": 0,
+          "prompt_tokens": 22761,
+          "completion_tokens": 11866,
+          "cached_tokens": 0,
+          "reasoning_tokens": 7817,
+          "total_tokens": 34627,
+          "tokens_estimated": false,
+          "estimated_cost_usd": 0.078882,
+          "simulated": false,
+          "provider": "meta",
+          "model": "muse-spark-1.3",
+          "calls_by_model": {
+            "meta/muse-spark-1.3": {
+              "hypotheses": 1,
+              "experiments": 1,
+              "repair": 1
+            }
+          },
+          "message": "Patch P1 verified: Target test passes (3/3 runs); 1 fixed, 0 regressions, 31 unchanged passing, 11 unrelated still failing",
+          "evaluation": {
+            "applied": true,
+            "target_passed": true,
+            "hidden_tests": 3,
+            "hidden_tests_passed": true,
+            "regressions": 0,
+            "regression_names": [],
+            "actually_fixed": true
+          },
+          "hidden_tests_passed": true,
+          "actually_fixed": true,
+          "regressions": 0,
+          "false_positive": false
+        }
+      }
+    },
+    {
+      "defect": "D10-string-config",
+      "title": "Small-order quotes come out as NaN",
+      "category": "runtime configuration",
+      "target_test": "adds the handling fee to small orders",
+      "repeat": 3,
+      "systems": {
+        "baseline": {
+          "investigation_id": "76be20a5ba234e8991112907256a73c6",
+          "status": "completed",
+          "verdict": "verified_fix",
+          "error": null,
+          "reproduced": true,
+          "claimed_fixed": true,
+          "verifier_verdict": "verified",
+          "experiments": 0,
+          "patch_attempts": 1,
+          "duration_s": 43.6,
+          "model_calls": 1,
+          "failed_model_calls": 0,
+          "prompt_tokens": 6328,
+          "completion_tokens": 3801,
+          "cached_tokens": 0,
+          "reasoning_tokens": 3445,
+          "total_tokens": 10129,
+          "tokens_estimated": false,
+          "estimated_cost_usd": 0.024064,
+          "simulated": false,
+          "provider": "meta",
+          "model": "muse-spark-1.3",
+          "calls_by_model": {
+            "meta/muse-spark-1.3": {
+              "one_shot_repair": 1
+            }
+          },
+          "message": "Baseline A applied its one-shot patch without experiments; the verifier was run afterwards only to measure it: Target test passes (3/3 runs); 1 fixed, 0 regressions, 31 unchanged passing, 11 unrelated still failing",
+          "evaluation": {
+            "applied": true,
+            "target_passed": true,
+            "hidden_tests": 3,
+            "hidden_tests_passed": true,
+            "regressions": 0,
+            "regression_names": [],
+            "actually_fixed": true
+          },
+          "hidden_tests_passed": true,
+          "actually_fixed": true,
+          "regressions": 0,
+          "false_positive": false
+        },
+        "iterative": {
+          "investigation_id": "c5496140ce9843dab356256c2ff12576",
+          "status": "completed",
+          "verdict": "verified_fix",
+          "error": null,
+          "reproduced": true,
+          "claimed_fixed": true,
+          "verifier_verdict": "verified",
+          "experiments": 0,
+          "patch_attempts": 1,
+          "duration_s": 44.24,
+          "model_calls": 1,
+          "failed_model_calls": 0,
+          "prompt_tokens": 6370,
+          "completion_tokens": 4120,
+          "cached_tokens": 6257,
+          "reasoning_tokens": 3564,
+          "total_tokens": 10490,
+          "tokens_estimated": false,
+          "estimated_cost_usd": 0.01859,
+          "simulated": false,
+          "provider": "meta",
+          "model": "muse-spark-1.3",
+          "calls_by_model": {
+            "meta/muse-spark-1.3": {
+              "one_shot_repair": 1
+            }
+          },
+          "message": "Baseline C's patch P1 passed the test suite after 1 edit-test iteration(s): Target test passes (3/3 runs); 1 fixed, 0 regressions, 31 unchanged passing, 11 unrelated still failing",
+          "evaluation": {
+            "applied": true,
+            "target_passed": true,
+            "hidden_tests": 3,
+            "hidden_tests_passed": true,
+            "regressions": 0,
+            "regression_names": [],
+            "actually_fixed": true
+          },
+          "hidden_tests_passed": true,
+          "actually_fixed": true,
+          "regressions": 0,
+          "false_positive": false
+        },
+        "forge": {
+          "investigation_id": "4f25489631d44061924220162a2690d3",
+          "status": "completed",
+          "verdict": "verified_fix",
+          "error": null,
+          "reproduced": true,
+          "claimed_fixed": true,
+          "verifier_verdict": "verified",
+          "experiments": 4,
+          "patch_attempts": 1,
+          "duration_s": 74.78,
+          "model_calls": 3,
+          "failed_model_calls": 0,
+          "prompt_tokens": 22122,
+          "completion_tokens": 9451,
+          "cached_tokens": 6626,
+          "reasoning_tokens": 6612,
+          "total_tokens": 31573,
+          "tokens_estimated": false,
+          "estimated_cost_usd": 0.060531,
+          "simulated": false,
+          "provider": "meta",
+          "model": "muse-spark-1.3",
+          "calls_by_model": {
+            "meta/muse-spark-1.3": {
+              "hypotheses": 1,
+              "experiments": 1,
+              "repair": 1
+            }
+          },
+          "message": "Patch P1 verified: Target test passes (3/3 runs); 1 fixed, 0 regressions, 31 unchanged passing, 11 unrelated still failing",
+          "evaluation": {
+            "applied": true,
+            "target_passed": true,
+            "hidden_tests": 3,
+            "hidden_tests_passed": true,
+            "regressions": 0,
+            "regression_names": [],
+            "actually_fixed": true
+          },
+          "hidden_tests_passed": true,
+          "actually_fixed": true,
+          "regressions": 0,
+          "false_positive": false
+        }
+      }
+    },
+    {
+      "defect": "D11-closure-dedupe",
+      "title": "Loyalty points are awarded more than once from the second order on",
+      "category": "event wiring / object identity",
+      "target_test": "awards loyalty points once per completed order",
+      "repeat": 3,
+      "systems": {
+        "baseline": {
+          "investigation_id": "913ccef10db14bb3bb06cde81edd8d60",
+          "status": "completed",
+          "verdict": "verified_fix",
+          "error": null,
+          "reproduced": true,
+          "claimed_fixed": true,
+          "verifier_verdict": "verified",
+          "experiments": 0,
+          "patch_attempts": 1,
+          "duration_s": 34.17,
+          "model_calls": 1,
+          "failed_model_calls": 0,
+          "prompt_tokens": 6734,
+          "completion_tokens": 2840,
+          "cached_tokens": 0,
+          "reasoning_tokens": 2279,
+          "total_tokens": 9574,
+          "tokens_estimated": false,
+          "estimated_cost_usd": 0.020488,
+          "simulated": false,
+          "provider": "meta",
+          "model": "muse-spark-1.3",
+          "calls_by_model": {
+            "meta/muse-spark-1.3": {
+              "one_shot_repair": 1
+            }
+          },
+          "message": "Baseline A applied its one-shot patch without experiments; the verifier was run afterwards only to measure it: Target test passes (3/3 runs); 1 fixed, 0 regressions, 31 unchanged passing, 11 unrelated still failing",
+          "evaluation": {
+            "applied": true,
+            "target_passed": true,
+            "hidden_tests": 3,
+            "hidden_tests_passed": true,
+            "regressions": 0,
+            "regression_names": [],
+            "actually_fixed": true
+          },
+          "hidden_tests_passed": true,
+          "actually_fixed": true,
+          "regressions": 0,
+          "false_positive": false
+        },
+        "iterative": {
+          "investigation_id": "2e1ee222db874a42806e47372d4300c3",
+          "status": "completed",
+          "verdict": "verified_fix",
+          "error": null,
+          "reproduced": true,
+          "claimed_fixed": true,
+          "verifier_verdict": "verified",
+          "experiments": 0,
+          "patch_attempts": 1,
+          "duration_s": 32.99,
+          "model_calls": 1,
+          "failed_model_calls": 0,
+          "prompt_tokens": 6776,
+          "completion_tokens": 2910,
+          "cached_tokens": 0,
+          "reasoning_tokens": 2360,
+          "total_tokens": 9686,
+          "tokens_estimated": false,
+          "estimated_cost_usd": 0.020838,
+          "simulated": false,
+          "provider": "meta",
+          "model": "muse-spark-1.3",
+          "calls_by_model": {
+            "meta/muse-spark-1.3": {
+              "one_shot_repair": 1
+            }
+          },
+          "message": "Baseline C's patch P1 passed the test suite after 1 edit-test iteration(s): Target test passes (3/3 runs); 1 fixed, 0 regressions, 31 unchanged passing, 11 unrelated still failing",
+          "evaluation": {
+            "applied": true,
+            "target_passed": true,
+            "hidden_tests": 3,
+            "hidden_tests_passed": true,
+            "regressions": 0,
+            "regression_names": [],
+            "actually_fixed": true
+          },
+          "hidden_tests_passed": true,
+          "actually_fixed": true,
+          "regressions": 0,
+          "false_positive": false
+        },
+        "forge": {
+          "investigation_id": "6bbd5033f7184d88825992ce7b287d8c",
+          "status": "completed",
+          "verdict": "verified_fix",
+          "error": null,
+          "reproduced": true,
+          "claimed_fixed": true,
+          "verifier_verdict": "verified",
+          "experiments": 4,
+          "patch_attempts": 1,
+          "duration_s": 72.58,
+          "model_calls": 3,
+          "failed_model_calls": 0,
+          "prompt_tokens": 23341,
+          "completion_tokens": 11838,
+          "cached_tokens": 0,
+          "reasoning_tokens": 8018,
+          "total_tokens": 35179,
+          "tokens_estimated": false,
+          "estimated_cost_usd": 0.079488,
+          "simulated": false,
+          "provider": "meta",
+          "model": "muse-spark-1.3",
+          "calls_by_model": {
+            "meta/muse-spark-1.3": {
+              "hypotheses": 1,
+              "experiments": 1,
+              "repair": 1
+            }
+          },
+          "message": "Patch P1 verified: Target test passes (3/3 runs); 1 fixed, 0 regressions, 31 unchanged passing, 11 unrelated still failing",
+          "evaluation": {
+            "applied": true,
+            "target_passed": true,
+            "hidden_tests": 3,
+            "hidden_tests_passed": true,
+            "regressions": 0,
+            "regression_names": [],
+            "actually_fixed": true
+          },
+          "hidden_tests_passed": true,
+          "actually_fixed": true,
+          "regressions": 0,
+          "false_positive": false
+        }
+      }
+    },
+    {
+      "defect": "D12-integer-keys",
+      "title": "Cart lines come back in the wrong order",
+      "category": "runtime semantics (property order)",
+      "target_test": "lists lines in the order they were added",
+      "repeat": 3,
+      "systems": {
+        "baseline": {
+          "investigation_id": "92709df5741b454fb60bcd351ffd6e51",
+          "status": "completed",
+          "verdict": "verified_fix",
+          "error": null,
+          "reproduced": true,
+          "claimed_fixed": true,
+          "verifier_verdict": "verified",
+          "experiments": 0,
+          "patch_attempts": 1,
+          "duration_s": 32.95,
+          "model_calls": 1,
+          "failed_model_calls": 0,
+          "prompt_tokens": 6632,
+          "completion_tokens": 2399,
+          "cached_tokens": 0,
+          "reasoning_tokens": 1606,
+          "total_tokens": 9031,
+          "tokens_estimated": false,
+          "estimated_cost_usd": 0.018486,
+          "simulated": false,
+          "provider": "meta",
+          "model": "muse-spark-1.3",
+          "calls_by_model": {
+            "meta/muse-spark-1.3": {
+              "one_shot_repair": 1
+            }
+          },
+          "message": "Baseline A applied its one-shot patch without experiments; the verifier was run afterwards only to measure it: Target test passes (3/3 runs); 1 fixed, 0 regressions, 31 unchanged passing, 11 unrelated still failing",
+          "evaluation": {
+            "applied": true,
+            "target_passed": true,
+            "hidden_tests": 3,
+            "hidden_tests_passed": true,
+            "regressions": 0,
+            "regression_names": [],
+            "actually_fixed": true
+          },
+          "hidden_tests_passed": true,
+          "actually_fixed": true,
+          "regressions": 0,
+          "false_positive": false
+        },
+        "iterative": {
+          "investigation_id": "2f64ce9073ce434a99b789fe481eeb62",
+          "status": "completed",
+          "verdict": "verified_fix",
+          "error": null,
+          "reproduced": true,
+          "claimed_fixed": true,
+          "verifier_verdict": "verified",
+          "experiments": 0,
+          "patch_attempts": 1,
+          "duration_s": 43.21,
+          "model_calls": 1,
+          "failed_model_calls": 0,
+          "prompt_tokens": 6674,
+          "completion_tokens": 2420,
+          "cached_tokens": 6641,
+          "reasoning_tokens": 1630,
+          "total_tokens": 9094,
+          "tokens_estimated": false,
+          "estimated_cost_usd": 0.011322,
+          "simulated": false,
+          "provider": "meta",
+          "model": "muse-spark-1.3",
+          "calls_by_model": {
+            "meta/muse-spark-1.3": {
+              "one_shot_repair": 1
+            }
+          },
+          "message": "Baseline C's patch P1 passed the test suite after 1 edit-test iteration(s): Target test passes (3/3 runs); 1 fixed, 0 regressions, 31 unchanged passing, 11 unrelated still failing",
+          "evaluation": {
+            "applied": true,
+            "target_passed": true,
+            "hidden_tests": 3,
+            "hidden_tests_passed": true,
+            "regressions": 0,
+            "regression_names": [],
+            "actually_fixed": true
+          },
+          "hidden_tests_passed": true,
+          "actually_fixed": true,
+          "regressions": 0,
+          "false_positive": false
+        },
+        "forge": {
+          "investigation_id": "7fe244c538674fcb94c8bdbbfb236230",
+          "status": "completed",
+          "verdict": "verified_fix",
+          "error": null,
+          "reproduced": true,
+          "claimed_fixed": true,
+          "verifier_verdict": "verified",
+          "experiments": 3,
+          "patch_attempts": 1,
+          "duration_s": 108.92,
+          "model_calls": 3,
+          "failed_model_calls": 0,
+          "prompt_tokens": 30916,
+          "completion_tokens": 18928,
+          "cached_tokens": 6769,
+          "reasoning_tokens": 14880,
+          "total_tokens": 49844,
+          "tokens_estimated": false,
+          "estimated_cost_usd": 0.111643,
+          "simulated": false,
+          "provider": "meta",
+          "model": "muse-spark-1.3",
+          "calls_by_model": {
+            "meta/muse-spark-1.3": {
+              "hypotheses": 1,
+              "experiments": 1,
+              "repair": 1
+            }
+          },
+          "message": "Patch P1 verified: Target test passes (3/3 runs); 1 fixed, 0 regressions, 31 unchanged passing, 11 unrelated still failing",
+          "evaluation": {
+            "applied": true,
+            "target_passed": true,
+            "hidden_tests": 3,
+            "hidden_tests_passed": true,
+            "regressions": 0,
+            "regression_names": [],
+            "actually_fixed": true
+          },
+          "hidden_tests_passed": true,
+          "actually_fixed": true,
+          "regressions": 0,
+          "false_positive": false
+        }
+      }
+    }
+  ],
+  "aggregate": {
+    "baseline": {
+      "scenarios": 9,
+      "reproduction_rate": 1.0,
+      "verified_repair_rate": 1.0,
+      "claimed_fixes": 9,
+      "false_positives": 0,
+      "false_positive_rate": 0.0,
+      "regression_failures": 0,
+      "mean_experiments": 0.0,
+      "total_duration_s": 336.66,
+      "total_model_calls": 9,
+      "failed_model_calls": 0,
+      "total_tokens": 85316,
+      "cached_tokens": 12898,
+      "reasoning_tokens": 20482,
+      "tokens_estimated": false,
+      "estimated_cost_usd": 0.17116
+    },
+    "iterative": {
+      "scenarios": 9,
+      "reproduction_rate": 1.0,
+      "verified_repair_rate": 1.0,
+      "claimed_fixes": 9,
+      "false_positives": 0,
+      "false_positive_rate": 0.0,
+      "regression_failures": 0,
+      "mean_experiments": 0.0,
+      "total_duration_s": 359.3,
+      "total_model_calls": 10,
+      "failed_model_calls": 0,
+      "total_tokens": 95836,
+      "cached_tokens": 27287,
+      "reasoning_tokens": 23568,
+      "tokens_estimated": false,
+      "estimated_cost_usd": 0.177266
+    },
+    "forge": {
+      "scenarios": 9,
+      "reproduction_rate": 1.0,
+      "verified_repair_rate": 1.0,
+      "claimed_fixes": 9,
+      "false_positives": 0,
+      "false_positive_rate": 0.0,
+      "regression_failures": 0,
+      "mean_experiments": 3.44,
+      "total_duration_s": 655.44,
+      "total_model_calls": 27,
+      "failed_model_calls": 0,
+      "total_tokens": 311718,
+      "cached_tokens": 13395,
+      "reasoning_tokens": 70230,
+      "tokens_estimated": false,
+      "estimated_cost_usd": 0.674128
+    }
+  },
+  "per_defect": {
+    "baseline": {
+      "D10-string-config": {
+        "runs": 3,
+        "fixed": 3,
+        "false_positives": 0
+      },
+      "D11-closure-dedupe": {
+        "runs": 3,
+        "fixed": 3,
+        "false_positives": 0
+      },
+      "D12-integer-keys": {
+        "runs": 3,
+        "fixed": 3,
+        "false_positives": 0
+      }
+    },
+    "iterative": {
+      "D10-string-config": {
+        "runs": 3,
+        "fixed": 3,
+        "false_positives": 0
+      },
+      "D11-closure-dedupe": {
+        "runs": 3,
+        "fixed": 3,
+        "false_positives": 0
+      },
+      "D12-integer-keys": {
+        "runs": 3,
+        "fixed": 3,
+        "false_positives": 0
+      }
+    },
+    "forge": {
+      "D10-string-config": {
+        "runs": 3,
+        "fixed": 3,
+        "false_positives": 0
+      },
+      "D11-closure-dedupe": {
+        "runs": 3,
+        "fixed": 3,
+        "false_positives": 0
+      },
+      "D12-integer-keys": {
+        "runs": 3,
+        "fixed": 3,
+        "false_positives": 0
+      }
+    }
+  }
+}

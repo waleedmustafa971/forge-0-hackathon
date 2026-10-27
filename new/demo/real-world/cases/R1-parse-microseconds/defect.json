@@ -1,0 +1,32 @@
+{
+  "id": "R1-parse-microseconds",
+  "title": "parse: timestamps lose microsecond precision (upstream issue #162)",
+  "category": "real-world bug (floating point)",
+  "repository": "demo/real-world/parse",
+  "upstream": {
+    "project": "r1chardj0n3s/parse",
+    "url": "https://github.com/r1chardj0n3s/parse",
+    "issue": 162,
+    "buggy_commit": "738447715c76f8ebc460b33320307faccafbc599",
+    "fix_commit": "ba6803d57179a4b026c8ed51d970156653153b62",
+    "fix_title": "Fix microsecond precision loss in timestamp parsing",
+    "license": "MIT"
+  },
+  "description": "date_convert turns the fractional seconds of a parsed time into microseconds with int(float('.' + u) * 1000000). The float product is slightly below the integer for about 1.2% of six-digit values, and int() truncates it, so 08.501902 parses as 501901 microseconds. Every time-bearing format (ti, tg, ta, te, th, tc, tt) goes through this function.",
+  "trap": "Not planted: this is the code as it was released, with the regression test the upstream fix added. Rounding the float instead of truncating fixes the visible cases but not inputs with more than six fractional digits, which upstream truncates.",
+  "relevant_files": [
+    "parse.py"
+  ],
+  "reproduction": [
+    "parse.parse('{:ti}', '2023-10-14T15:09:08.501902Z')[0].microsecond",
+    "returns 501901 instead of 501902"
+  ],
+  "failing_test": {
+    "file": "tests/test_bugs.py",
+    "name": "tests/test_bugs.py > test_microsecond_precision_issue162"
+  },
+  "expected_behavior": "Fractional seconds are read digit-exactly: padded to six digits, extra digits truncated, for every time format.",
+  "regression_tests": [],
+  "hidden_tests": "benchmarks/hidden-tests/test_R1_parse_microseconds.py",
+  "added": "2026-10-27 (Meta hackathon)"
+}

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FORGE-0 Evaluation 20261027-103750-meta+openai</title>
+<style>
+:root{--bg:#0c0e11;--card:#12151a;--border:#242a32;--text:#e4e7eb;--muted:#8a929d}
+@media (prefers-color-scheme: light){:root{--bg:#f6f7f9;--card:#fff;--border:#e1e4e8;--text:#16191d;--muted:#5b6470}}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 Inter,system-ui,sans-serif;padding:24px 16px}
+main{max-width:1100px;margin:0 auto} h1{font-size:20px;margin:0 0 4px} .muted{color:var(--muted)}
+.note{background:#132235;border:1px solid #e8a33d55;border-radius:8px;padding:10px 14px;margin:16px 0;color:#f3e3c4}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px}
+.metric{margin-bottom:14px} .label{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:6px}
+.row{display:grid;grid-template-columns:170px 1fr 70px;gap:10px;align-items:center;margin:4px 0}
+.track{height:10px;background:var(--border);border-radius:3px;overflow:hidden} .fill{height:100%}
+table{width:100%;border-collapse:collapse;margin-top:16px} th,td{text-align:left;padding:8px;border-bottom:1px solid var(--border);vertical-align:top}
+th{font-size:11px;text-transform:uppercase;color:var(--muted)} .ok{color:#4fb38b} .bad{color:#e5675f}
+.wrap{overflow-x:auto} code{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px}
+</style></head><body><main>
+<h1>FORGE-0 evaluation</h1>
+<div class="muted">run <code>20261027-103750-meta+openai</code> · provider meta+openai/muse-spark-1.3 + meta-models/muse-spark-open-1026 · 2 defect runs</div>
+<div class="note">Real-model evaluation: every model output came from the configured provider; all executions, verifications and hidden-test evaluations were run in the sandbox. Small sample (9 defects) - treat rates as indicative, not statistically significant.</div>
+<div class="grid"><div class="card">
+<div class="metric"><div class="label">Verified repair rate (hidden-test confirmed)</div><div class="row"><span>System B · FORGE-0</span><div class="track"><div class="fill" style="width:100.0%;background:#e8a33d"></div></div><code>100%</code></div></div>
+<div class="metric"><div class="label">Reproduction rate</div><div class="row"><span>System B · FORGE-0</span><div class="track"><div class="fill" style="width:100.0%;background:#e8a33d"></div></div><code>100%</code></div></div>
+<div class="metric"><div class="label">False-positive repair rate</div><div class="row"><span>System B · FORGE-0</span><div class="track"><div class="fill" style="width:0.0%;background:#e8a33d"></div></div><code>0%</code></div></div>
+<div class="metric"><div class="label">Claimed fixes with regressions</div><div class="row"><span>System B · FORGE-0</span><div class="track"><div class="fill" style="width:0.0%;background:#e8a33d"></div></div><code>0</code></div></div>
+</div><div class="card">
+<div class="metric"><div class="label">Mean experiments per defect</div><div class="row"><span>System B · FORGE-0</span><div class="track"><div class="fill" style="width:100.0%;background:#e8a33d"></div></div><code>4.0</code></div></div>
+<div class="metric"><div class="label">Total wall time (s)</div><div class="row"><span>System B · FORGE-0</span><div class="track"><div class="fill" style="width:100.0%;background:#e8a33d"></div></div><code>264</code></div></div>
+<div class="metric"><div class="label">Total tokens</div><div class="row"><span>System B · FORGE-0</span><div class="track"><div class="fill" style="width:100.0%;background:#e8a33d"></div></div><code>130,506</code></div></div>
+<div class="metric"><div class="label">Estimated API cost (USD)</div><div class="row"><span>System B · FORGE-0</span><div class="track"><div class="fill" style="width:100.0%;background:#e8a33d"></div></div><code>$0.3044</code></div></div>
+</div></div>
+<div class="card wrap"><table><thead><tr><th>Defect</th><th>System</th><th>Reproduced</th><th>Claimed</th><th>Verifier</th>
+<th>Hidden tests</th><th>Outcome</th><th>Experiments</th><th>Patches</th><th>Time</th></tr></thead><tbody><tr><td><code>D6-layered-refund</code><br><small>Refunds short-change the customer and lose restocked units</small></td><td>System B · FORGE-0</td><td>✔</td><td>✔</td><td>verified</td><td>✔</td><td class='ok'>fixed</td><td>4</td><td>3</td><td>152.3s</td></tr><tr><td><code>R1-parse-microseconds</code><br><small>parse: timestamps lose microsecond precision (upstream issue #162)</small></td><td>System B · FORGE-0</td><td>✔</td><td>✔</td><td>verified</td><td>✔</td><td class='ok'>fixed</td><td>4</td><td>1</td><td>111.5s</td></tr></tbody></table></div>
+</main></body></html>

@@ -1,0 +1,30 @@
+{
+  "id": "D7-stale-price-cache",
+  "title": "Price changes are invisible behind the pricing cache",
+  "category": "caching",
+  "description": "CatalogService.updatePrice writes the new price to the PriceBook, but quotes are served by a CachingPricingClient that never forgets a SKU, so every later quote returns the old price. The cache has no invalidation API.",
+  "trap": "The quickest fix (quoting straight from the PriceBook or removing the cache) passes the target test but breaks the rate-limit contract in test/pricing-cache.test.ts, a different test file that the failing test does not import. Clearing the whole cache also breaks the documented contract for unchanged SKUs (hidden tests).",
+  "relevant_files": [
+    "src/services/catalogService.ts",
+    "src/gateways/cachingPricing.ts",
+    "src/gateways/priceBook.ts"
+  ],
+  "reproduction": [
+    "Quote SKU-MOUSE (19.99).",
+    "Update its price to 17.5.",
+    "Quote it again: still 19.99."
+  ],
+  "failing_test": {
+    "file": "test/catalog.test.ts",
+    "name": "quotes the new price after a price change"
+  },
+  "expected_behavior": "A price change is visible to the next quote of that SKU, while unchanged SKUs keep being served from the cache (at most one backend lookup per SKU per price).",
+  "regression_tests": [
+    "quotes the list price of several SKUs",
+    "rejects non-positive prices",
+    "looks each SKU up at most once across repeated quotes",
+    "does not look up SKUs that were never quoted"
+  ],
+  "hidden_tests": "benchmarks/hidden-tests/D7-stale-price-cache.test.ts",
+  "added": "2026-10-27 (Meta hackathon)"
+}

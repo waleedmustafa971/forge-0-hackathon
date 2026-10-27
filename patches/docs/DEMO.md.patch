@@ -1,0 +1,38 @@
+diff --git a/docs/DEMO.md b/docs/DEMO.md
+index a1e2df4..e506c84 100644
+--- a/docs/DEMO.md
++++ b/docs/DEMO.md
+@@ -22,7 +22,7 @@ Open the dashboard (<http://127.0.0.1:8010> in lite mode, <http://127.0.0.1:5173
+ **Repositories → order-management (demo)**. The profile shows TypeScript, the `node:test` runner
+ and the `node:24-alpine` sandbox image. Browse `src/services/orderService.ts`.
+ 
+-Click **Run in sandbox**: the suite runs in an offline, read-only container — 14 passed, 5 failed.
++Click **Run in sandbox**: the suite runs in an offline, read-only container — 31 passed, 12 failed.
+ Each failure is one planted defect.
+ 
+ ## 2. Investigate the concurrency defect (≈45 s)
+@@ -42,7 +42,7 @@ Watch the workspace:
+    * E3 — *counterfactual*: serialize `addItem` in a disposable copy and the original failure
+      disappears → H1 confirmed (96%).
+ 4. **E · Repair** writes a per-order keyed mutex; **F · Verifier** re-runs everything on fresh
+-   copies: target passes 3/3, 0 regressions, 4 unrelated failures unchanged.
++   copies: target passes 3/3, 0 regressions, 11 unrelated failures unchanged.
+ 
+ Open **Experiment timeline → Evidence** on E3 to see the predictions table, the belief update and the
+ intervention diff; **Raw output** shows the exact command, image and sandbox limits.
+@@ -81,7 +81,14 @@ Runs step 3 through the API and verifies 17 properties (reproduction, rejection
+ `records separate charges` regression, verification of P2, the complete evidence timeline, Markdown
+ export, simulated labelling). Last result: 17/17.
+ 
+-## 6. Switch to Muse Spark
++## 6. From GitHub instead of the dashboard
++
++`forge0-ci --repo <checkout> --test "<failing test>" --dry-run` runs the same investigation
++headlessly and prints the git/gh commands it would run: a branch, a commit by `forge0[bot]`, and
++`gh pr create` with the evidence as the description. Without `--dry-run`, and in the workflow from
++[integrations/github](../integrations/github/README.md), it opens the PR for real.
++
++## 7. Switch to Muse Spark
+ 
+ See [API_INTEGRATION.md](API_INTEGRATION.md): add `META_API_KEY`, set `AI_PROVIDER=meta`, restart,
+ run `scripts/check_meta.py`, repeat steps 2–4 with real inference.

@@ -1,0 +1,34 @@
+diff --git a/backend/tests/test_belief.py b/backend/tests/test_belief.py
+index e54dabc..268c76d 100644
+--- a/backend/tests/test_belief.py
++++ b/backend/tests/test_belief.py
+@@ -46,3 +46,29 @@ def test_refuting_everything_moves_mass_to_unexplained():
+     apply_evidence(state, "E2", evaluate(preds, "fail", ""), False)
+     assert state.other > 0.5
+     assert all(h.status in ("refuted", "weakened") for h in state.hypotheses.values())
++
++
++def test_runtime_failure_leaves_predictions_without_output_untested():
++    # D4 regression: a probe that demonstrates a leaked rejection is failed by node:test itself,
++    # which must not count against the hypothesis that predicted the leak.
++    state = initial_state({"H1": 0.8, "H2": 0.2})
++    preds = [{"hypothesis": "H1", "outcome": "pass"}, {"hypothesis": "H2", "outcome": "fail"}]
++    evals = evaluate(
++        preds, "fail", "probe [unhandledRejection]: CarrierUnavailableError", runtime_failure=True
++    )
++    assert [e["matched"] for e in evals] == [None, None]
++    before = {k: h.confidence for k, h in state.hypotheses.items()}
++    apply_evidence(state, "E1", evals, True)
++    assert {k: h.confidence for k, h in state.hypotheses.items()} == pytest.approx(before)
++    assert state.hypotheses["H1"].contradictions == 0 and state.hypotheses["H1"].support == 0
++
++
++def test_runtime_failure_still_scores_predictions_that_name_the_output():
++    preds = [
++        {"hypothesis": "H1", "outcome": "fail", "output_contains": "unhandledRejection"},
++        {"hypothesis": "H2", "outcome": "pass"},
++    ]
++    evals = evaluate(
++        preds, "fail", "probe [unhandledRejection]: CarrierUnavailableError", runtime_failure=True
++    )
++    assert [e["matched"] for e in evals] == [True, None]

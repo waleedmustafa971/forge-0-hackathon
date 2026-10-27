@@ -1,0 +1,13 @@
+diff --git a/backend/sandbox/images/python/Dockerfile b/backend/sandbox/images/python/Dockerfile
+index 12285b9..03d453a 100644
+--- a/backend/sandbox/images/python/Dockerfile
++++ b/backend/sandbox/images/python/Dockerfile
+@@ -3,6 +3,8 @@
+ FROM python:3.12-alpine
+ RUN pip install --no-cache-dir "pytest>=8.3" \
+     && adduser -D -u 1000 sandbox
++# Regex test selection (--forge0-pattern), loaded with `-p forge0_pytest`.
++COPY forge0_pytest.py /usr/local/lib/python3.12/site-packages/forge0_pytest.py
+ USER 1000:1000
+ ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+ WORKDIR /work

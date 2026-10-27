@@ -1,0 +1,25 @@
+{
+  "id": "D9-order-dependent-cache",
+  "title": "Loyalty balances leak between independent app instances",
+  "category": "order-dependent (flaky) test",
+  "description": "LoyaltyService caches point balances in a module-level Map instead of per instance. Every app created in the same process shares it, so a balance cached by one test's app is returned for the same customer id in a later test's fresh app. The target test passes on its own and fails only after an earlier test in the same file has awarded points to 'cust-1'.",
+  "trap": "The target passes in isolation, which looks like a flaky or broken test. A fix has to explain why the test order matters; patching the test is not allowed, and per-call workarounds (re-reading the database only for zero balances, clearing the cache in award) leave independent instances sharing state.",
+  "relevant_files": [
+    "src/services/loyaltyService.ts"
+  ],
+  "reproduction": [
+    "Run test/loyalty.test.ts as a whole: the last test sees 68 points for a brand-new account.",
+    "Run only 'starts every new account at zero points': it passes."
+  ],
+  "failing_test": {
+    "file": "test/loyalty.test.ts",
+    "name": "starts every new account at zero points"
+  },
+  "expected_behavior": "Each LoyaltyService instance (and its database) has its own cache; a new app starts every account at zero regardless of test order.",
+  "regression_tests": [
+    "awards one point per whole unit spent",
+    "rejects negative amounts"
+  ],
+  "hidden_tests": "benchmarks/hidden-tests/D9-order-dependent-cache.test.ts",
+  "added": "2026-10-27 (Meta hackathon)"
+}

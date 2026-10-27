@@ -1,0 +1,61 @@
+diff --git a/backend/agents/belief.py b/backend/agents/belief.py
+index f92d178..b3cafb5 100644
+--- a/backend/agents/belief.py
++++ b/backend/agents/belief.py
+@@ -9,7 +9,9 @@ executed experiment is scored against the predictions made *before* it ran:
+ * no prediction for this hypothesis    -> likelihood 0.5 (uninformative)
+ 
+ Posteriors are renormalised after every experiment. Errors and timeouts carry no
+-evidence and leave the ranking unchanged.
++evidence and leave the ranking unchanged. When the runtime fails a test before its assertions
++can decide (an escaped rejection or exception), only predictions that name an expected output
++are scored; the others are left untested (matched=None, likelihood 0.5).
+ """
+ 
+ from __future__ import annotations
+@@ -84,10 +86,22 @@ def is_discriminating(predictions: list[dict[str, Any]]) -> bool:
+     return len(signatures) > 1
+ 
+ 
+-def evaluate(predictions: list[dict[str, Any]], outcome: str, output: str) -> list[dict[str, Any]]:
++def evaluate(
++    predictions: list[dict[str, Any]], outcome: str, output: str, runtime_failure: bool = False
++) -> list[dict[str, Any]]:
+     results = []
+     for prediction in predictions:
+-        matched, reason = prediction_matches(prediction, outcome, output)
++        matched: bool | None
++        if runtime_failure and not prediction.get("output_contains"):
++            matched, reason = (
++                None,
++                (
++                    "untested: the runtime failed the test (escaped rejection or exception) before its "
++                    "assertions could decide, and the prediction names no expected output"
++                ),
++            )
++        else:
++            matched, reason = prediction_matches(prediction, outcome, output)
+         results.append(
+             {
+                 "hypothesis": prediction.get("hypothesis"),
+@@ -111,7 +125,10 @@ def apply_evidence(
+     weighted: dict[str, float] = {}
+     for key, belief in state.hypotheses.items():
+         ev = by_key.get(key)
+-        likelihood = L_NONE if ev is None else (L_MATCH if ev["matched"] else L_MISMATCH)
++        if ev is None or ev["matched"] is None:
++            likelihood = L_NONE
++        else:
++            likelihood = L_MATCH if ev["matched"] else L_MISMATCH
+         weighted[key] = belief.confidence * likelihood
+     other = state.other * L_NONE
+     total = sum(weighted.values()) + other
+@@ -119,7 +136,7 @@ def apply_evidence(
+         before = belief.confidence
+         belief.confidence = weighted[key] / total if total else before
+         ev = by_key.get(key)
+-        if ev is not None:
++        if ev is not None and ev["matched"] is not None:
+             if ev["matched"]:
+                 belief.support += 1
+                 if discriminating:

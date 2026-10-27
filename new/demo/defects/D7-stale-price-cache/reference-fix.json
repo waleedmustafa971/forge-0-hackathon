@@ -1,0 +1,26 @@
+{
+  "defect": "D7-stale-price-cache",
+  "rationale": "Give the cache a per-SKU invalidate() and call it whenever the catalog changes a price, so only the changed SKU is looked up again.",
+  "edits": [
+    {
+      "file": "src/gateways/cachingPricing.ts",
+      "search": "    this.cache.set(sku, price);\n    return price;\n  }\n}",
+      "replace": "    this.cache.set(sku, price);\n    return price;\n  }\n\n  /** Drops the cached price of `sku` so the next lookup reaches the backend. */\n  invalidate(sku: string): void {\n    this.cache.delete(sku);\n  }\n}"
+    },
+    {
+      "file": "src/services/catalogService.ts",
+      "search": "import type { PriceBook } from '../gateways/priceBook.ts';\nimport type { PricingClient } from '../gateways/pricing.ts';",
+      "replace": "import type { CachingPricingClient } from '../gateways/cachingPricing.ts';\nimport type { PriceBook } from '../gateways/priceBook.ts';"
+    },
+    {
+      "file": "src/services/catalogService.ts",
+      "search": "  private readonly pricing: PricingClient;\n\n  constructor(priceBook: PriceBook, pricing: PricingClient) {",
+      "replace": "  private readonly pricing: CachingPricingClient;\n\n  constructor(priceBook: PriceBook, pricing: CachingPricingClient) {"
+    },
+    {
+      "file": "src/services/catalogService.ts",
+      "search": "    await this.priceBook.setPrice(sku, price);",
+      "replace": "    await this.priceBook.setPrice(sku, price);\n    this.pricing.invalidate(sku);"
+    }
+  ]
+}

@@ -1,0 +1,144 @@
+diff --git a/backend/services/repo_analysis.py b/backend/services/repo_analysis.py
+index ffaf2cd..c921055 100644
+--- a/backend/services/repo_analysis.py
++++ b/backend/services/repo_analysis.py
+@@ -5,6 +5,8 @@ Reads files only; never executes repository code.
+ 
+ from __future__ import annotations
+ 
++import heapq
++import itertools
+ import json
+ import os
+ import posixpath
+@@ -69,6 +71,23 @@ _IMPORT_TS = re.compile(
+     r"""(?:import|export)\s[^'"]*?from\s+['"](\.{1,2}/[^'"]+)['"]|import\(\s*['"](\.{1,2}/[^'"]+)['"]"""
+ )
+ _IMPORT_PY = re.compile(r"^\s*from\s+(\.+[\w.]*|[\w.]+)\s+import|^\s*import\s+([\w.]+)", re.MULTILINE)
++_IMPORT_LINE = re.compile(
++    r"^\s*(?:import|export)\b.*?(?:from\s+)?['\"][^'\"]+['\"];?\s*$"  # TypeScript / JavaScript
++    r"|^\s*from\s+\S+\s+import\b.*$"  # Python
++)
++_IDENTIFIER = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
++# Language keywords say nothing about which module a test exercises (`async` is not lib/async.ts).
++_KEYWORD_TEXT = (
++    "abstract as assert async await break case catch class const continue def default del delete do elif "
++    "else enum except export extends false finally for from function global if implements import in "
++    "instanceof interface is lambda let new none nonlocal not null of or pass private protected public "
++    "raise readonly return self static super switch this throw true try type typeof undefined var void "
++    "while with yield"
++)
++_KEYWORDS = frozenset(_KEYWORD_TEXT.split())
++# A named file importing more modules than this is a composition root (e.g. app.ts wiring every
++# service); its imports are not promoted, or they would crowd out the code under test.
++_FAN_OUT_LIMIT = 6
+ _NODE_TEST_GLOB = re.compile(r"node\s+(?:--[\w-]+(?:=\S+)?\s+)*--test\b(?P<rest>.*)")
+ 
+ 
+@@ -192,6 +211,25 @@ def resolve_import(root: Path, from_file: str, spec: str) -> str | None:
+     return None
+ 
+ 
++def resolve_python_import(root: Path, from_file: str, module: str) -> str | None:
++    """Maps `pkg.mod` (or a relative `.mod`) to a file in the repository, trying src/ layouts too."""
++    if module.startswith("."):
++        level = len(module) - len(module.lstrip("."))
++        base = PurePosixPath(from_file).parent
++        for _ in range(level - 1):
++            base = base.parent
++        rest = module.lstrip(".")
++        stems = [(base / rest.replace(".", "/")).as_posix() if rest else base.as_posix()]
++    else:
++        path = module.replace(".", "/")
++        stems = [path, f"src/{path}"]
++    for stem in stems:
++        for candidate in (f"{stem}.py", f"{stem}/__init__.py"):
++            if (root / candidate).is_file():
++                return posixpath.normpath(candidate)
++    return None
++
++
+ def imports_of(root: Path, rel: str) -> list[str]:
+     path = root / rel
+     try:
+@@ -205,9 +243,33 @@ def imports_of(root: Path, rel: str) -> list[str]:
+             resolved = resolve_import(root, rel, spec)
+             if resolved and resolved not in found:
+                 found.append(resolved)
++    elif path.suffix == ".py":
++        for match in _IMPORT_PY.finditer(text):
++            module = match.group(1) or match.group(2)
++            candidates = [module]
++            if match.group(1):
++                # `from pkg import mod` may name a submodule: try pkg.mod before pkg itself.
++                line_end = text.find("\n", match.end())
++                names = re.findall(r"\w+", text[match.end() : line_end if line_end != -1 else None])
++                joiner = "" if module.endswith(".") else "."
++                candidates = [f"{module}{joiner}{name}" for name in names] + candidates
++            for candidate in candidates:
++                resolved = resolve_python_import(root, rel, candidate)
++                if resolved and resolved != rel and resolved not in found:
++                    found.append(resolved)
+     return found
+ 
+ 
++def names_used(root: Path, rel: str) -> set[str]:
++    """Lower-cased identifiers used in a file's code, ignoring its import statements."""
++    try:
++        text = (root / rel).read_text(encoding="utf-8", errors="replace")
++    except OSError:
++        return set()
++    body = "\n".join(line for line in text.splitlines() if not _IMPORT_LINE.match(line))
++    return {name.lower() for name in _IDENTIFIER.findall(body)} - _KEYWORDS
++
++
+ def collect_relevant_files(
+     root: Path,
+     seeds: list[tuple[str, str]],
+@@ -216,13 +278,25 @@ def collect_relevant_files(
+     max_total_chars: int = 60_000,
+     per_file_chars: int = 12_000,
+ ) -> list[FileExcerpt]:
+-    """Breadth-first walk from seed files through relative imports, bounded by size."""
+-    queue: list[tuple[str, str]] = list(seeds)
++    """Walks from seed files through relative imports, bounded by size.
++
++    Files the seeds' code names (e.g. ``app.refundService`` -> ``refundService.ts``) and their direct
++    imports are collected first, so a composition root that imports every module cannot crowd the
++    code under test out of the budget (the root itself is still collected, but its imports are not
++    promoted). Everything else follows in breadth-first order.
++    """
++    named: dict[str, str] = {}  # identifier -> seed that uses it
++    for seed, _ in seeds:
++        for name in names_used(root, seed):
++            named.setdefault(name, seed)
++    order = itertools.count()
++    # (tier, discovery order, path, reason): 0 seeds, 1 named by a seed, 2 imported by a named file, 3 rest
++    queue: list[tuple[int, int, str, str]] = [(0, next(order), rel, reason) for rel, reason in seeds]
+     seen: set[str] = set()
+     excerpts: list[FileExcerpt] = []
+     total = 0
+     while queue and len(excerpts) < max_files and total < max_total_chars:
+-        rel, reason = queue.pop(0)
++        tier, _, rel, reason = heapq.heappop(queue)
+         if rel in seen or not (root / rel).is_file():
+             continue
+         seen.add(rel)
+@@ -234,7 +308,14 @@ def collect_relevant_files(
+         content = content[:per_file_chars]
+         total += len(content)
+         excerpts.append(FileExcerpt(path=rel, content=content, truncated=truncated, reason=reason))
+-        for dep in imports_of(root, rel):
+-            if dep not in seen:
+-                queue.append((dep, f"imported by {rel}"))
++        deps = imports_of(root, rel)
++        promote = tier == 1 and len(deps) <= _FAN_OUT_LIMIT
++        for dep in deps:
++            if dep in seen:
++                continue
++            stem = PurePosixPath(dep).stem.split(".")[0].lower()
++            if stem in named:
++                heapq.heappush(queue, (1, next(order), dep, f"named in {named[stem]}"))
++            else:
++                heapq.heappush(queue, (2 if promote else 3, next(order), dep, f"imported by {rel}"))
+     return excerpts

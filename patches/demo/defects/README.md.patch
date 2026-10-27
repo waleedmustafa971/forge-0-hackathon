@@ -1,0 +1,54 @@
+diff --git a/demo/defects/README.md b/demo/defects/README.md
+index 79a33e8..c99b69a 100644
+--- a/demo/defects/README.md
++++ b/demo/defects/README.md
+@@ -11,16 +11,47 @@ evaluation tests live in `benchmarks/hidden-tests/`.
+ | [D3-transaction-leak](D3-transaction-leak/defect.json) | DB transactions | `leaves inventory untouched when a multi-item order fails` | `reserve(this.db, …)` bypasses the transaction | `reserve(tx, …)` |
+ | [D4-unhandled-async-error](D4-unhandled-async-error/defect.json) | async errors | `reports carrier failures and does not mark the order as shipped` | `forEach(async …)` discards promises | await each shipment inside `try` |
+ | [D5-terminal-status](D5-terminal-status/defect.json) | validation | `does not allow a cancelled order to be paid or shipped` | empty transition list treated as unrestricted | only listed transitions are allowed |
++| [D6-layered-refund](D6-layered-refund/defect.json) | layered defects | `refunds the full amount and restocks every line of the order` | refund ignores quantities **and** `Promise.all` restock races on duplicate SKUs | refund `order.total`; release lines sequentially |
++| [D7-stale-price-cache](D7-stale-price-cache/defect.json) | caching | `quotes the new price after a price change` | price cache is never invalidated | per-SKU `invalidate()` called on price change |
++| [D8-stateful-regex](D8-stateful-regex/defect.json) | runtime semantics | `redeems part of a card balance` | global-flag regex makes `.test()` stateful | drop the `g` flag |
++| [D9-order-dependent-cache](D9-order-dependent-cache/defect.json) | order-dependent (flaky) test | `starts every new account at zero points` | module-level cache shared by every app instance | per-instance cache |
++| [D10-string-config](D10-string-config/defect.json) | runtime configuration | `adds the handling fee to small orders` | fees in `config/fees.json` (read at runtime) are strings, so they concatenate | parse and validate every fee when loading |
++| [D11-closure-dedupe](D11-closure-dedupe/defect.json) | event wiring / identity | `awards loyalty points once per completed order` | `onUnique` dedupes by function identity, but checkout passes fresh closures each time | subscribe once, in the constructor |
++| [D12-integer-keys](D12-integer-keys/defect.json) | runtime semantics | `lists lines in the order they were added` | cart lines in a plain object keyed by numeric id iterate in numeric order | store each cart in a `Map` |
++
++D1–D5 are the original defects. **D6–D9 were added during the Meta hackathon (2026-10-27)**
++because Muse Spark 1.3 fixed D1–D5 in a single shot. Each `defect.json` has a `trap` field explaining
++why it is designed to defeat a one-shot repair:
++
++* **D6** has two causes; the failing assertion only reports the first, so a one-shot fix of the
++  amount still fails on the restock race.
++* **D7**'s quickest fix (bypassing the cache) breaks a rate-limit contract tested in a *different*
++  file (`test/pricing-cache.test.ts`), which the one-shot baseline never sees.
++* **D8**'s cause is a runtime property of the regex object shared by every caller; patching one call
++  site passes the visible test but fails the hidden ones.
++* **D9** passes in isolation and fails only after an earlier test in its file: FORGE-0's flaky-test
++  triage classifies it as *order-dependent* before any hypothesis is formed.
++
++**D10–D12 were added next**, after both the edit-test loop and FORGE-0 fixed D1–D9 every time. They
++were [pre-registered](../../benchmarks/preregistration/2026-10-27-harder-defects.md) before any run:
++in each, the root cause is a *runtime* fact that the code in the prompt does not show, and a local
++patch passes every visible test while leaving it in place.
++
++* **D10**: the fees are strings in a JSON file read at runtime; converting the one fee in the failing
++  path leaves the gift-wrap fee broken.
++* **D11**: de-duplicating loyalty awards hides the symptom, but receipts are still duplicated and the
++  subscriber list keeps growing.
++* **D12**: sorting `lines()` by an insertion sequence leaves checkout listing products by id.
+ 
+ Each `defect.json` contains the description, relevant files, reproduction steps, failing test,
+ expected behaviour and regression tests. Each `reference-fix.json` contains search/replace edits in
+ the same format FORGE-0 uses.
+ 
+-Reproduce all five failures:
++Reproduce all twelve failures:
+ 
+ ```bash
+ cd demo/order-management
+-node --test "test/**/*.test.ts"     # 14 pass, 5 fail
++node --test "test/**/*.test.ts"     # 31 pass, 12 fail
+ ```
+ 
+ The integration suite applies every reference fix in the sandbox and checks that its target and

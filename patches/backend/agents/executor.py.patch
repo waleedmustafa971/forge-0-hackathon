@@ -1,0 +1,58 @@
+diff --git a/backend/agents/executor.py b/backend/agents/executor.py
+index 8257b5a..fa2693e 100644
+--- a/backend/agents/executor.py
++++ b/backend/agents/executor.py
+@@ -18,6 +18,9 @@ LOAD_ERROR_CODES = {
+     "ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX",
+     "ERR_INVALID_TYPESCRIPT_SYNTAX",
+ }
++# node:test fails the running test when a rejection or exception escapes asynchronously, even if
++# the test listens for it; the test's own assertions never decide such a failure.
++RUNTIME_FAILURE_TYPES = {"unhandledRejection", "uncaughtException"}
+ 
+ 
+ @dataclass
+@@ -28,6 +31,16 @@ class ExperimentRun:
+     intervention_diff: str = ""
+     attempts: int = 1
+ 
++    @property
++    def runtime_failure(self) -> bool:
++        return self.outcome == "fail" and is_runtime_failure(self.result)
++
++
++def is_runtime_failure(result: ExecutionResult | None) -> bool:
++    """True when every failing test was failed by the runtime rather than by an assertion."""
++    failing = result.test_run.failing() if result and result.test_run else []
++    return bool(failing) and all(t.failure_type in RUNTIME_FAILURE_TYPES for t in failing)
++
+ 
+ def classify(result: ExecutionResult, targets: list[str]) -> tuple[str, str]:
+     if result.infra_error:
+@@ -45,7 +58,15 @@ def classify(result: ExecutionResult, targets: list[str]) -> tuple[str, str]:
+         if test.name in normalized_targets or test.name.endswith((".ts", ".js", ".mjs", ".py")):
+             return "error", f"Test file failed to load: {(test.error or '')[:200]}"
+     if run.failed:
+-        return "fail", f"{run.failed} of {run.total} executed tests failed"
++        detail = f"{run.failed} of {run.total} executed tests failed"
++        if is_runtime_failure(result):
++            first = run.failing()[0]
++            detail += (
++                f" by the runtime ({first.failure_type}: {first.error_name}: {(first.error or '')[:160]}), "
++                "not by an assertion; node:test fails a test when a rejection or exception escapes, "
++                "even if the test listens for it"
++            )
++        return "fail", detail
+     if run.passed:
+         return "pass", f"All {run.passed} executed tests passed"
+     return "error", "Every executed test was skipped"
+@@ -57,7 +78,8 @@ def observation_text(result: ExecutionResult | None) -> str:
+     parts = []
+     if result.test_run:
+         for test in result.test_run.failing():
+-            parts.append(f"{test.name}: {test.error_name}: {test.error}")
++            kind = f" [{test.failure_type}]" if test.failure_type else ""
++            parts.append(f"{test.name}{kind}: {test.error_name}: {test.error}")
+     parts += [result.stdout[-20000:], result.stderr[-5000:]]
+     return "\n".join(p for p in parts if p)
+ 

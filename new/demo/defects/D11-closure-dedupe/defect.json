@@ -1,0 +1,27 @@
+{
+  "id": "D11-closure-dedupe",
+  "title": "Loyalty points are awarded more than once from the second order on",
+  "category": "event wiring / object identity",
+  "description": "CheckoutService.complete() attaches its order.paid subscribers on every call through EventBus.onUnique(), which de-duplicates by function identity. Each call passes fresh arrow functions, so nothing is ever de-duplicated: after n checkouts every subscriber runs n times per event. Points are over-awarded, receipts are duplicated and the listener list grows without bound.",
+  "trap": "The symptom is in loyalty points, and the comment says onUnique makes repeat calls harmless. De-duplicating awards by order id (or stabilising only the rewards handler) passes every visible test, but receipts are still sent several times per order and the subscriber list keeps growing (hidden tests).",
+  "relevant_files": [
+    "src/services/checkoutService.ts",
+    "src/lib/events.ts",
+    "src/services/loyaltyService.ts"
+  ],
+  "reproduction": [
+    "Complete an order for SKU-KEYBOARD (49.5) and one for SKU-MOUSE (19.99) for the same customer.",
+    "The customer has 87 points instead of 68: the second order was awarded twice."
+  ],
+  "failing_test": {
+    "file": "test/checkout-events.test.ts",
+    "name": "awards loyalty points once per completed order"
+  },
+  "expected_behavior": "Each subscriber runs exactly once per paid order, however many checkouts have happened.",
+  "regression_tests": [
+    "sends a receipt for a completed order",
+    "captures the order total"
+  ],
+  "hidden_tests": "benchmarks/hidden-tests/D11-closure-dedupe.test.ts",
+  "added": "2026-10-27 (Meta hackathon; pre-registered in benchmarks/preregistration/2026-10-27-harder-defects.md)"
+}

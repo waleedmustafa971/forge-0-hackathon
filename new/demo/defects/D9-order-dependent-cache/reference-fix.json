@@ -1,0 +1,26 @@
+{
+  "defect": "D9-order-dependent-cache",
+  "rationale": "Scope the balance cache to the service instance so separate apps (and databases) never share balances.",
+  "edits": [
+    {
+      "file": "src/services/loyaltyService.ts",
+      "search": "const TABLE = 'loyalty';\n\n/** Point balances already read, so repeated look-ups skip the database. */\nconst balances = new Map<string, number>();\n\nexport class LoyaltyService {\n  private readonly db: InMemoryDatabase;\n",
+      "replace": "const TABLE = 'loyalty';\n\nexport class LoyaltyService {\n  private readonly db: InMemoryDatabase;\n  /** Point balances already read, so repeated look-ups skip the database. */\n  private readonly balances = new Map<string, number>();\n"
+    },
+    {
+      "file": "src/services/loyaltyService.ts",
+      "search": "    await this.db.put(TABLE, customerId, { customerId, points: next });\n    balances.set(customerId, next);",
+      "replace": "    await this.db.put(TABLE, customerId, { customerId, points: next });\n    this.balances.set(customerId, next);"
+    },
+    {
+      "file": "src/services/loyaltyService.ts",
+      "search": "    const cached = balances.get(customerId);",
+      "replace": "    const cached = this.balances.get(customerId);"
+    },
+    {
+      "file": "src/services/loyaltyService.ts",
+      "search": "    balances.set(customerId, points);\n    return points;",
+      "replace": "    this.balances.set(customerId, points);\n    return points;"
+    }
+  ]
+}

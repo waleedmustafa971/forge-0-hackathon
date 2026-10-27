@@ -1,0 +1,11 @@
+{
+  "defect": "D6-layered-refund",
+  "rationale": "Refund the stored order total, and release stock one line at a time so lines for the same SKU cannot overwrite each other's read-modify-write.",
+  "edits": [
+    {
+      "file": "src/services/refundService.ts",
+      "search": "    const amount = order.items.reduce((sum, item) => sum + item.unitPrice, 0);\n    await Promise.all(order.items.map((item) => this.inventory.release(this.db, item.sku, item.quantity)));",
+      "replace": "    const amount = order.total;\n    for (const item of order.items) {\n      await this.inventory.release(this.db, item.sku, item.quantity);\n    }"
+    }
+  ]
+}

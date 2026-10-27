@@ -1,0 +1,22 @@
+diff --git a/frontend/src/api/types.ts b/frontend/src/api/types.ts
+index 959dcc2..2f383ed 100644
+--- a/frontend/src/api/types.ts
++++ b/frontend/src/api/types.ts
+@@ -76,7 +76,7 @@ export interface Investigation {
+   title: string;
+   symptom: string;
+   target_test: string | null;
+-  mode: 'forge' | 'baseline';
++  mode: 'forge' | 'baseline' | 'iterative';
+   status: InvestigationStatus;
+   phase: string;
+   active_agent: string | null;
+@@ -170,7 +170,7 @@ export interface PredictionEvaluation {
+   predicted: string;
+   output_contains: string | null;
+   observed: string;
+-  matched: boolean;
++  matched: boolean | null;
+   reason: string;
+ }
+ 

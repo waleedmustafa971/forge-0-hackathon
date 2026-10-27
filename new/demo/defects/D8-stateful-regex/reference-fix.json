@@ -1,0 +1,11 @@
+{
+  "defect": "D8-stateful-regex",
+  "rationale": "Drop the global flag: the pattern is anchored and used only for whole-string tests, so it must not carry lastIndex state between calls.",
+  "edits": [
+    {
+      "file": "src/domain/giftCardCode.ts",
+      "search": "const GIFT_CARD_CODE = /^GC-[0-9]{4}-[0-9A-Z]{4}$/g;",
+      "replace": "const GIFT_CARD_CODE = /^GC-[0-9]{4}-[0-9A-Z]{4}$/;"
+    }
+  ]
+}

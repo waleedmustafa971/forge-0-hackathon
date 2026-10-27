@@ -1,0 +1,127 @@
+diff --git a/backend/agents/investigator.py b/backend/agents/investigator.py
+index 86c1181..3c74a51 100644
+--- a/backend/agents/investigator.py
++++ b/backend/agents/investigator.py
+@@ -1,8 +1,9 @@
+ """Agent A — Repository Investigator.
+ 
+ Deterministic analysis: static profile, a baseline test run in the sandbox, failure
+-extraction from the TAP stream, an isolated reproduction run, and collection of the
+-source files implicated by stack traces and the failing test's import graph.
++extraction from the TAP stream, repeated isolated reproduction runs that classify the failure
++as deterministic, intermittent (flaky) or order-dependent, and collection of the source files
++implicated by stack traces and the failing test's import graph.
+ """
+ 
+ from __future__ import annotations
+@@ -13,6 +14,7 @@ from agents.base import AgentError, InvestigationContext, dump
+ from core.schemas import (
+     ExecutionResult,
+     FailureObservation,
++    FlakinessReport,
+     InvestigationReport,
+     RuntimeProfile,
+     TestCaseResult,
+@@ -21,6 +23,9 @@ from sandbox.tap import find_test, leaf_name
+ from services.repo_analysis import collect_relevant_files, profile_repository
+ from services.workspace import is_test_path
+ 
++# Isolated re-runs of the target: enough to tell "always fails" from "sometimes fails".
++REPRODUCTION_RUNS = 3
++
+ _FRAME = re.compile(r"/work/(?P<path>[^\s:()]+):(?P<line>\d+)(?::\d+)?")
+ 
+ 
+@@ -60,6 +65,46 @@ def isolation_pattern(test_name: str) -> str:
+     return f"^{re.escape(leaf_name(test_name))}$"
+ 
+ 
++def classify_flakiness(isolated: list[str], file_run: str | None, test_file: str | None) -> FlakinessReport:
++    failures = isolated.count("failed")
++    runs = len(isolated)
++    if runs and failures == runs:
++        kind, summary = "deterministic", f"failed {failures}/{runs} isolated re-runs (deterministic)"
++    elif failures:
++        kind, summary = (
++            "intermittent",
++            (
++                f"INTERMITTENT: failed only {failures}/{runs} isolated re-runs; the failure is flaky "
++                "(timing, randomness, or shared state), so a fix must be shown to hold over repeated runs"
++            ),
++        )
++    elif file_run == "failed":
++        kind, summary = (
++            "order_dependent",
++            (
++                f"ORDER-DEPENDENT: passed {runs}/{runs} isolated re-runs but fails when `{test_file}` "
++                "runs as a whole; an earlier test in that file leaves state behind "
++                "(module-level state, caches, globals)"
++            ),
++        )
++    elif file_run == "passed":
++        kind, summary = (
++            "order_dependent",
++            (
++                f"ORDER-DEPENDENT: passes alone and when `{test_file}` runs alone, but fails in the "
++                "full suite; it depends on other test files or on shared external state"
++            ),
++        )
++    else:
++        kind, summary = "unknown", f"isolated re-runs: {isolated}; could not classify the failure"
++    return FlakinessReport(classification=kind, isolated_runs=isolated, file_run=file_run, summary=summary)
++
++
++def _status(run: ExecutionResult, test_name: str) -> str:
++    found = find_test(run.test_run, test_name) if run.test_run else None
++    return found.status if found else ("error" if run.infra_error else "missing")
++
++
+ class RepositoryInvestigator:
+     name = "investigator"
+ 
+@@ -157,19 +202,35 @@ class RepositoryInvestigator:
+ 
+         reproduction = None
+         if target.file:
+-            reproduction = ctx.sandbox.run_tests(
+-                ctx.snapshot, runtime.runner, [target.file], isolation_pattern(target.name)
+-            )
+-            ctx.budget.sandbox_runs += 1
+-            rerun = find_test(reproduction.test_run, target.name) if reproduction.test_run else None
+-            report.reproduction_confirmed = bool(rerun and rerun.status == "failed")
++            isolated: list[str] = []
++            for _ in range(REPRODUCTION_RUNS):
++                ctx.checkpoint()
++                run = ctx.sandbox.run_tests(
++                    ctx.snapshot, runtime.runner, [target.file], isolation_pattern(target.name)
++                )
++                ctx.budget.sandbox_runs += 1
++                reproduction = reproduction or run
++                isolated.append(_status(run, target.name))
++            file_run = None
++            if "failed" not in isolated:
++                whole_file = ctx.sandbox.run_tests(ctx.snapshot, runtime.runner, [target.file])
++                ctx.budget.sandbox_runs += 1
++                file_run = _status(whole_file, target.name)
++                if file_run == "failed":
++                    reproduction = whole_file  # order-dependent: the file run is what reproduces it
++            report.reproduction_confirmed = "failed" in isolated or file_run == "failed"
++            report.flakiness = classify_flakiness(isolated, file_run, target.file)
+             ctx.emit(
+                 self.name,
+                 "reproduction",
+-                "Target failure reproduced in isolation"
+-                if report.reproduction_confirmed
+-                else "Target failure did NOT reproduce in isolation (order-dependent or flaky)",
+-                {"reproduced": report.reproduction_confirmed, "duration_ms": reproduction.duration_ms},
++                f"Target failure {report.flakiness.summary}",
++                {
++                    "reproduced": report.reproduction_confirmed,
++                    "classification": report.flakiness.classification,
++                    "isolated_runs": isolated,
++                    "file_run": file_run,
++                    "duration_ms": reproduction.duration_ms if reproduction else None,
++                },
+             )
+ 
+         seeds = [

@@ -1,0 +1,17 @@
+diff --git a/demo/order-management/src/repositories/inventoryRepository.ts b/demo/order-management/src/repositories/inventoryRepository.ts
+index 3b517a3..a1d6537 100644
+--- a/demo/order-management/src/repositories/inventoryRepository.ts
++++ b/demo/order-management/src/repositories/inventoryRepository.ts
+@@ -13,6 +13,12 @@ export class InventoryRepository {
+     return record?.available ?? 0;
+   }
+ 
++  /** Returns `quantity` units of `sku` to stock. */
++  async release(db: DbHandle, sku: string, quantity: number): Promise<void> {
++    const available = await this.available(db, sku);
++    await db.put(TABLE, sku, { sku, available: available + quantity });
++  }
++
+   /** Decrements stock for `sku`, failing if not enough units are available. */
+   async reserve(db: DbHandle, sku: string, quantity: number): Promise<void> {
+     const available = await this.available(db, sku);

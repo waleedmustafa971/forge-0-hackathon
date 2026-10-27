@@ -1,0 +1,12 @@
+diff --git a/.gitignore b/.gitignore
+index c09937e..1364256 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -10,6 +10,7 @@ data/
+ *.db
+ *.db-wal
+ *.db-shm
++benchmark.log
+ 
+ # Python
+ __pycache__/

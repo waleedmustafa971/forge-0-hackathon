@@ -1,0 +1,44 @@
+diff --git a/backend/tests/test_meta_contract.py b/backend/tests/test_meta_contract.py
+index 681bcc0..9bce63c 100644
+--- a/backend/tests/test_meta_contract.py
++++ b/backend/tests/test_meta_contract.py
+@@ -193,17 +193,32 @@ def test_unrelated_400_is_not_masked_by_downgrade():
+         )
+ 
+ 
+-def test_truncated_output_fails_fast_with_usage():
+-    calls = []
++def test_truncated_output_is_retried_once_with_a_doubled_limit():
++    limits = []
+ 
+     def handler(r):
+-        calls.append(1)
++        limits.append(json.loads(r.content)["max_completion_tokens"])
+         return completion('{"reasoning_summary": "cut', finish="length")
+ 
+-    with pytest.raises(ProviderError, match="truncated at max_completion_tokens") as info:
+-        provider(handler).generate(request(), HypothesisSet)
+-    assert len(calls) == 1  # no doomed repair round
+-    assert info.value.usage.prompt_tokens == 100 and info.value.usage.completion_tokens == 50
++    with pytest.raises(ProviderError, match=r"truncated at max_completion_tokens \(16384\)") as info:
++        provider(handler, ai_max_tokens=8192).generate(request(), HypothesisSet)
++    assert limits == [8192, 16384]  # no doomed repair round, only more room
++    assert info.value.usage.prompt_tokens == 200 and info.value.usage.completion_tokens == 100
++
++
++def test_truncated_output_succeeds_after_limit_is_raised():
++    limits = []
++
++    def handler(r):
++        limits.append(json.loads(r.content)["max_completion_tokens"])
++        if len(limits) == 1:
++            return completion(None, finish="length")
++        return completion(json.dumps(HYP))
++
++    result = provider(handler, ai_max_tokens=4096).generate(request(), HypothesisSet)
++    assert limits == [4096, 8192]
++    assert len(result.output.hypotheses) == 2
++    assert result.usage.requests == 2
+ 
+ 
+ def test_refusal_and_content_filter_are_reported():

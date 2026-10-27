@@ -1,0 +1,38 @@
+diff --git a/backend/agents/repair.py b/backend/agents/repair.py
+index 3e8a630..b9d34a9 100644
+--- a/backend/agents/repair.py
++++ b/backend/agents/repair.py
+@@ -5,7 +5,7 @@ from __future__ import annotations
+ from typing import Any
+ 
+ from agents.base import InvestigationContext
+-from agents.prompts import one_shot_prompt, repair_prompt
++from agents.prompts import iterative_prompt, one_shot_prompt, repair_prompt
+ from core.schemas import InvestigationReport, PatchDraft
+ from services.workspace import EditError, EditResult, apply_edits
+ 
+@@ -53,6 +53,24 @@ class RepairEngineer:
+             schema=PatchDraft,
+         )
+ 
++    def propose_iterative(
++        self, report: InvestigationReport, previous: list[dict[str, Any]], attempt: int
++    ) -> PatchDraft:
++        ctx = self.ctx
++        ctx.set_phase(f"edit-test loop (baseline C, attempt {attempt + 1})", self.name)
++        system, user = iterative_prompt(report, ctx.symptom, previous)
++        return ctx.call_model(
++            agent=self.name,
++            task="one_shot_repair" if attempt == 0 else "iterative_repair",
++            system=system,
++            user=user,
++            context={
++                "target_test": report.target_failure.test_name if report.target_failure else None,
++                "attempt": attempt,
++            },
++            schema=PatchDraft,
++        )
++
+     def materialize(self, draft: PatchDraft, label: str) -> EditResult:
+         """Applies the patch to a scratch copy to validate it and compute the unified diff."""
+         ctx = self.ctx

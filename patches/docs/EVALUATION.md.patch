@@ -1,0 +1,272 @@
+diff --git a/docs/EVALUATION.md b/docs/EVALUATION.md
+index 42ad10b..48d5497 100644
+--- a/docs/EVALUATION.md
++++ b/docs/EVALUATION.md
+@@ -1,26 +1,30 @@
+-# Evaluation methodology
++# Evaluation methodology and results
+ 
+ ## Question
+ 
+-Does hypothesis-driven, experiment-backed debugging (System B, FORGE-0) produce more *real* fixes
+-and fewer *false* fix claims than asking a model for a patch directly (Baseline A), and at what cost?
++Does hypothesis-driven, experiment-backed debugging (FORGE-0) produce more *real* fixes and fewer
++*false* fix claims than asking a model for a patch, and at what cost? "Asking a model" is measured
++two ways: a single one-shot request, and the edit → run tests → retry loop that coding agents use
++today.
+ 
+ ## Systems
+ 
+-| | Baseline A · direct one-shot repair | System B · FORGE-0 |
+-| --- | --- | --- |
+-| Context | Same Investigator report: failing test output, stack frames, relevant files | Same |
+-| Hypotheses | none | ≥2 competing, with priors |
+-| Experiments | none | discriminating probes and counterfactual interventions in the sandbox |
+-| Patch | one model call | Repair Engineer, up to `MAX_REPAIR_ATTEMPTS`, with verifier feedback |
+-| Claims a fix when | it produces a patch | the Independent Verifier accepts a patch |
++| | Baseline A · one-shot | Baseline C · edit-test loop | FORGE-0 |
++| --- | --- | --- | --- |
++| Context | Same Investigator report: failing test output, stack frames, relevant files, re-run classification | Same | Same |
++| Hypotheses | none | none | ≥2 competing, with priors |
++| Experiments | none | none (the loop's test runs are its feedback) | discriminating probes and counterfactual interventions in the sandbox |
++| Patch | one model call | up to `1 + max_experiment_rounds + max_repair_attempts` calls (7 here, the same call budget FORGE-0 has); each retry sees the full test deltas of every earlier attempt | Repair Engineer, up to `MAX_REPAIR_ATTEMPTS`, with verifier feedback |
++| Claims a fix when | it produces a patch | the Independent Verifier accepts a patch | the Independent Verifier accepts a patch |
+ 
+-Both run through the same orchestrator, sandbox and provider. The Independent Verifier also runs
+-after Baseline A, but only to *measure* it — its result does not feed back.
++All three run through the same orchestrator, sandbox, provider and verifier. For Baseline A the
++verifier runs only to *measure* the patch; its result does not feed back. Baseline C was added
++during the hackathon (2026-10-27) because a one-shot baseline is too weak a comparison.
+ 
+ ## Dataset
+ 
+-Five planted defects in `demo/order-management` (catalog: `demo/defects/`):
++Ten defects (catalogs: [`demo/defects/`](../demo/defects/README.md),
++[`demo/real-world/`](../demo/real-world/README.md)):
+ 
+ | Id | Category | Symptom |
+ | --- | --- | --- |
+@@ -29,31 +33,138 @@ Five planted defects in `demo/order-management` (catalog: `demo/defects/`):
+ | D3-transaction-leak | DB transactions | a failed checkout leaks stock reservations |
+ | D4-unhandled-async-error | async error handling | carrier failures bypass `try/catch` |
+ | D5-terminal-status | validation | cancelled orders can be paid/shipped |
+-
+-Each defect has a failing test, regression tests that pass before the fix, a reference fix and
+-**hidden tests** (`benchmarks/hidden-tests/`) that neither system ever sees. The integration suite
+-proves every reference fix passes its target, regression and hidden tests without breaking anything
+-(`backend/tests/test_integration_docker.py`).
++| D6-layered-refund *(new)* | two causes | refund ignores quantities **and** the restock races on duplicate SKUs |
++| D7-stale-price-cache *(new)* | caching | the quickest fix breaks a rate-limit contract tested in another file |
++| D8-stateful-regex *(new)* | runtime semantics | a global-flag regex makes `.test()` stateful across callers |
++| D9-order-dependent-cache *(new)* | order-dependent test | passes alone, fails after an earlier test in its file |
++| R1-parse-microseconds *(new, real)* | real open-source bug | [`parse`](https://github.com/r1chardj0n3s/parse) issue #162: timestamps lose microseconds to float truncation; vendored at the commit before the upstream fix, with the project's own regression test (Python, pytest) |
++
++D1–D9 are planted in `demo/order-management` (TypeScript, `node:test`). D6–D9 and R1 were added
++during the hackathon; each D6–D9 `defect.json` documents the **trap** that makes a one-shot fix
++fail. Every defect has a failing test, regression tests, a reference fix and **hidden tests**
++(`benchmarks/hidden-tests/`) that no system sees. Every reference fix passes its target, regression
++and hidden tests without breaking anything; every trap patch is caught by the hidden tests.
+ 
+ ## Independent evaluation
+ 
+ For each claimed patch, the harness (`benchmarks/run_benchmark.py`) takes a fresh copy of the
+ repository, applies the patch, adds the defect's hidden tests and runs the whole suite in the
+ sandbox. A defect counts as **actually fixed** only if the target test passes, every hidden test
+-passes and no previously passing test regresses.
++passes and no previously passing test regresses. A **false positive** is a claimed fix that is not
++actually fixed.
+ 
+ ## Metrics
+ 
+ | Metric | Definition |
+ | --- | --- |
+-| Reproduction success rate | target failure re-observed in an isolated re-run |
+-| Verified repair rate | actually fixed / defects |
++| Reproduction success rate | target failure re-observed by the Investigator's re-runs (E0) |
++| Verified repair rate | actually fixed / runs |
+ | False-positive repair rate | claimed but not actually fixed / claimed |
+ | Regression failures | claimed fixes that break a previously passing test |
+ | Experiments | sandbox experiments executed (excludes the E0 control run) |
+ | Execution time | wall-clock per investigation |
+-| Token usage | `usage` reported by the provider (estimated for mock) |
+-| Estimated API cost | tokens × configured list price (Muse Spark 1.3 standard: $1.25 / $4.25 per 1M) |
++| Token usage | `usage` reported by the provider |
++| Estimated API cost | tokens × list price (Muse Spark 1.3 standard: $1.25 / $4.25 per 1M; Muse Spark Open on Baseten has the same list price) |
++| Calls by model | which model served which task (`calls_by_model` in each result row) |
++
++## Results — Muse Spark 1.3, 10 defects × 3 systems × 3 repeats (2026-10-27)
++
++Run `20261027-101729-meta` ([JSON](../benchmarks/results/20261027-101729-meta.json),
++[HTML](../benchmarks/results/20261027-101729-meta.html)): `muse-spark-1.3`, standard mode,
++`reasoning_effort=medium`, 8,192 max tokens, temperature 0.2. 90 investigations, 0 failed model
++calls, **$2.89** spent in total.
++
++| Metric | Baseline A · one-shot | Baseline C · edit-test loop | FORGE-0 |
++| --- | --- | --- | --- |
++| Verified repair rate (hidden-test confirmed) | 93% (28/30) | **100% (30/30)** | **100% (30/30)** |
++| False-positive repair claims | **2** (D6 ×2) | 0 | 0 |
++| Claimed fixes with regressions | 0 | 0 | 0 |
++| Mean experiments per investigation | 0 | 0 | 3.9 |
++| Model calls | 30 | 32 | 98 |
++| Tokens | 222,241 | 240,001 | 1,015,274 |
++| Mean wall time per investigation | 23 s | 25 s | 63 s |
++| Cost (list price) | $0.37 · $0.012 per run | $0.40 · $0.013 per run | $2.12 · $0.071 per run |
++
++Per defect, every system fixed D1–D5, D7–D9 and R1 in all three repeats. The differences are all
++on **D6**, the two-cause defect:
++
++* **Baseline A** fixed the refund amount but not the restock race in two of three runs. The target
++  test still failed, the verifier rejected the patch, and a one-shot tool would have shipped it
++  anyway: those are its two false positives.
++* **Baseline C** needed a second attempt in two of three runs: its first patch fixed one cause, the
++  test run showed the target still failing, and the retry fixed the other.
++* **FORGE-0** ran 3–7 experiments that separated the two causes, and its first patch was verified
++  in two of three runs (the third needed one revision).
++
++**What this shows, honestly.** With a model as strong as Muse Spark 1.3, any system that *runs the
++tests and retries* matches FORGE-0's fix rate on this set, at about a fifth of the cost; only the
++one-shot baseline makes false claims. On these defects FORGE-0's advantage is not a higher fix rate.
++It is that every fix arrives with its evidence: the explanations that were considered and ruled
++out, the experiments that ruled them out, the flaky-test classification, and an independent
++verification. That is what turns a patch into a pull request a reviewer can trust, which is what
++`forge0-ci` uses it for. A fix-rate gap would need harder defects than these ten.
++
++**Reproduction.** The run recorded a 90% reproduction rate: D9's nine investigations counted as
++not reproduced, because the metric then looked only at *isolated* re-runs, and D9 by definition
++passes alone. The whole-file re-run did reproduce it, and the triage classified it as
++order-dependent. The metric now counts that re-run (fixed after this run, checked on D9 in the real
++sandbox), which makes the rate 100% for this dataset.
++
++## Pre-registered harder defects and an open-weights arm (2026-10-27)
++
++Because the ten defects did not separate the loop from FORGE-0, three more (D10–D12, whose root
++cause is a runtime fact a local patch can hide) and two arms were
++[pre-registered](../benchmarks/preregistration/2026-10-27-harder-defects.md) and committed before
++any run, together with predictions and the rule for claiming that FORGE-0 beats the loop.
++
++| Arm | Baseline A · one-shot | Baseline C · loop | FORGE-0 |
++| --- | --- | --- | --- |
++| **A.** Muse Spark 1.3, D10–D12 × 3 (`20261027-115421-meta`, $1.02) | 9/9 · 0 false claims | 9/9 · 0 | 9/9 · 0 |
++| **B.** Muse Spark Open only, all 13 defects × 3 (`20261027-132544-openai`, $6.06) | not run | **38/39** · 1 false claim | 30/39 · **0** |
++
++* **Arm A is a tie.** The predictions that the loop would often miss D10 and D11 were wrong: every
++  system, the one-shot baseline included, fixed the whole cause rather than the local symptom.
++* **Arm B goes to the loop.** Seven of FORGE-0's nine misses are runs that never got a plan: Muse
++  Spark Open spent its whole 16,384-token budget reasoning in the experiment-design call and
++  returned nothing usable. The other two are D11 ending inconclusive. On the 32 runs where every
++  call returned, FORGE-0 fixed 30. The loop's one miss is a false claim (D1 #1 passed the visible
++  tests and failed the hidden ones); FORGE-0 made none. FORGE-0 cost $0.135 per run, the loop
++  $0.020.
++
++So on everything measured so far, **FORGE-0 does not beat an edit-test loop on fix rate**. With an
++open-weights model it loses, mainly because its experiment-design step is fragile on that model.
++Its consistent advantage is precision: in the three benchmarks of the current code (78 FORGE-0
++runs), no fix FORGE-0 claimed failed the hidden tests, while the one-shot baseline made 2 false
++claims in 39 runs and the loop 1 in 78. Making experiment design robust on open models (a smaller plan, a lower reasoning effort
++on retry, or falling back to a direct repair) is the next change, and per the pre-registration it
++will be reported as a new run on all defects.
++
++## Two Meta models in two roles (2026-10-27)
++
++Run `20261027-103750-meta+openai`
++([JSON](../benchmarks/results/20261027-103750-meta+openai.json)), config
++`benchmarks/configs/muse-spark-two-models.json`: FORGE-0 only, D6 and R1, one repeat. Muse Spark
++1.3 (Meta Model API) formed the hypotheses; the open-weights **Muse Spark Open**
++(`meta-models/muse-spark-open-1026` on Baseten) designed the experiments and wrote the repairs.
++
++| Defect | Verdict | Hidden tests | Calls by model |
++| --- | --- | --- | --- |
++| D6-layered-refund | verified fix | pass | Muse Spark 1.3: 1 (hypotheses) · Muse Spark Open: 4 (1 experiment plan, 3 repairs) |
++| R1-parse-microseconds | verified fix | pass | Muse Spark 1.3: 1 (hypotheses) · Muse Spark Open: 2 (1 experiment plan, 1 repair) |
++
++$0.30 for both. It is a smoke test of the routing, not a capability comparison.
++
++## Earlier runs
++
++* `20261027-072844-meta` — the first real run, D1–D5 × Baseline A / FORGE-0 × 3: Baseline A 15/15,
++  FORGE-0 11/15. FORGE-0 lost four runs to two bugs that this run exposed and that are now fixed.
++  D4 #1 and #3 ended inconclusive because correct predictions about an `unhandledRejection` were
++  scored as wrong (node:test fails a probe when a rejection escapes it, which looked like an
++  assertion failure). D4 #2 and D1 #3 crashed because an experiment plan cut off at
++  `max_completion_tokens` failed the call instead of being retried with a higher limit.
++* `20261019-073640-mock`, `20261019-085242-mock` — mock provider, scripted fixtures. **Not evidence
++  of model capability**: Baseline A was handed each scenario's scripted "first idea" patch, wrong by
++  design for D1 and D2. They validated the pipeline end to end before API access existed.
+ 
+ ## Running
+ 
+@@ -62,58 +173,33 @@ Runs are described by JSON configs in `benchmarks/configs/`:
+ | Config | Provider | Defects × systems × repeats | Guards |
+ | --- | --- | --- | --- |
+ | `mock.json` (default) | mock (scripted) | 5 × 2 × 1 | results are labelled SIMULATED |
+-| `muse-spark-1.3.json` | Meta, `muse-spark-1.3`, `reasoning_effort=medium`, 8,192 max tokens | 5 × 2 × 3 | refuses the mock fallback (exit 3); worst-case cost printed and capped at $25; requires `--yes` |
++| `muse-spark-1.3.json` | Meta, `muse-spark-1.3` | 10 × 3 × 3 | refuses the mock fallback (exit 3); worst-case cost printed and capped at $200; stops at $20 actually spent; requires `--yes` |
++| `muse-spark-two-models.json` | Meta + Muse Spark Open (OpenAI-compatible) | 2 × 1 × 1 | same, $3 spend cap |
+ 
+ ```powershell
+ backend\.venv\Scripts\python benchmarks\run_benchmark.py                                   # mock
+ backend\.venv\Scripts\python benchmarks\run_benchmark.py --config benchmarks\configs\muse-spark-1.3.json --dry-run
+ backend\.venv\Scripts\python benchmarks\run_benchmark.py --config benchmarks\configs\muse-spark-1.3.json --yes
+-backend\.venv\Scripts\python benchmarks\run_benchmark.py --defects D2-duplicate-charge --repeats 2   # overrides
++backend\.venv\Scripts\python benchmarks\run_benchmark.py --defects D6-layered-refund --systems iterative,forge --repeats 2
+ ```
+ 
+ `--dry-run` validates the config, the sandbox and provider connectivity (`GET /models`, no tokens)
+-and prints the worst-case cost. That estimate assumes every call uses the full model-call budget,
+-a schema-repair round, 10k prompt tokens and the full output limit. Three repeats are used for real
+-models because their output is stochastic; report per-defect success counts (`per_defect` in the
+-results), failed model calls and token usage.
++and prints the worst-case cost: every call uses the full model-call budget, is truncated once,
++needs a schema-repair round, sends 10k prompt tokens and fills every output limit. The real run
++also tracks what it has actually spent and stops, writing partial results, at `max_spend_usd`.
++On a machine with little memory, run the full benchmark in its own terminal (about 55 minutes).
+ 
+ Results: `benchmarks/results/<run_id>.json` (raw) and `.html` (visual report); also shown on the
+-dashboard's **Evaluation** page.
+-
+-## Current results — mock only
+-
+-> **These numbers are NOT evidence of model capability.** The only completed run used the mock
+-> provider, whose outputs are fixtures authored for this demo. Baseline A was given each
+-> scenario's scripted "first idea" patch; for D1 and D2 that first idea is plausible but wrong by
+-> design, to show what verification catches. The sandbox runs, the verifier and the hidden-test
+-> evaluation are real executions. No real-model evaluation has been run yet (no API key).
+-
+-Run `20261019-073640-mock` (`benchmarks/results/20261019-073640-mock.json`); a second run with the
+-rewritten harness (`20261019-085242-mock`) reproduced the same outcomes and token counts:
+-
+-| Metric | Baseline A | System B |
+-| --- | --- | --- |
+-| Reproduction success rate | 100% | 100% |
+-| Verified repair rate (hidden-test confirmed) | 60% (3/5) | 100% (5/5) |
+-| False-positive repair rate | 40% (2/5 claims) | 0% (0/5 claims) |
+-| Claimed fixes with regressions | 1 | 0 |
+-| Mean experiments per defect | 0 | 3 |
+-| Total wall time | 91.6 s | 115.2 s |
+-| Model calls | 5 | 16 |
+-| Tokens (estimated) | 31,253 | 115,506 |
+-| Estimated cost at list price (hypothetical) | $0.041 | $0.169 |
+-
+-What this run *does* validate: the whole pipeline executes end to end on five defect classes; the
+-verifier catches a wrong patch that leaves the target failing (D1 baseline) and a patch that fixes
+-the target but breaks `records separate charges for separate capture calls` (D2 — both the
+-baseline and System B's first attempt, which System B then revised); hidden tests agree with the
+-verifier on every verified patch; and evidence costs roughly 3.7× the tokens of a one-shot repair.
++dashboard's **Evaluation** page, which opens on the newest multi-system comparison.
+ 
+ ## Threats to validity
+ 
+-* Five small, synthetic defects in one TypeScript service; the defects were written alongside the
+-  system that solves them.
+-* The mock comparison is constructed; only a real-model run measures the method.
+-* Single run per configuration; real models are stochastic — repeat runs (`n ≥ 5`) are needed for
+-  rates with confidence intervals.
++* Ten defects, nine of them planted in one small TypeScript service by the people who built the
++  system that solves them. Only R1 is a real bug in someone else's code.
++* Three repeats per configuration: enough to see that the D6 difference is not a one-off, not
++  enough for tight confidence intervals.
++* Muse Spark 1.3 fixed most defects in one shot; the set does not yet contain defects hard enough
++  to separate Baseline C from FORGE-0 on fix rate.
+ * The hidden tests are stricter than the visible tests but not exhaustive.
++* The offline sandbox does not install dependencies, so only projects whose tests run on Node's
++  built-in runner or on pytest with the standard library can be evaluated.

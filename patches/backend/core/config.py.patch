@@ -1,0 +1,16 @@
+diff --git a/backend/core/config.py b/backend/core/config.py
+index 2ae379b..1f1e826 100644
+--- a/backend/core/config.py
++++ b/backend/core/config.py
+@@ -56,6 +56,11 @@ class Settings(BaseSettings):
+     openai_compat_model: str = "llama3.1"
+     openai_compat_structured_output: Literal["json_schema", "json_object", "none"] = "json_object"
+ 
++    # Optional second provider for selected agent tasks, e.g. Muse Spark Open (via the OpenAI-
++    # compatible endpoint) for experiment design and repairs while Meta's API forms hypotheses.
++    ai_secondary_provider: Literal["", "meta", "openai"] = ""
++    ai_secondary_tasks: str = "experiments,repair"
++
+     # --- Sandbox --------------------------------------------------------------
+     sandbox_docker_command: str = "auto"
+     sandbox_wsl_distro: str = ""

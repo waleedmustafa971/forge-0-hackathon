@@ -1,0 +1,13 @@
+diff --git a/frontend/src/pages/investigation/Workspace.tsx b/frontend/src/pages/investigation/Workspace.tsx
+index 43c229f..5b3bcef 100644
+--- a/frontend/src/pages/investigation/Workspace.tsx
++++ b/frontend/src/pages/investigation/Workspace.tsx
+@@ -58,7 +58,7 @@ export default function Workspace({ live }: { live: LiveInvestigation }) {
+             flush
+           >
+             {!live.hypotheses.length ? (
+-              <Empty>{inv.mode === 'baseline' ? 'Baseline A does not generate hypotheses.' : 'No hypotheses yet.'}</Empty>
++              <Empty>{inv.mode === 'forge' ? 'No hypotheses yet.' : 'Baselines do not generate hypotheses.'}</Empty>
+             ) : (
+               <table className="table">
+                 <tbody>

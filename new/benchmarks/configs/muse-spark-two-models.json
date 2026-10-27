@@ -1,0 +1,26 @@
+{
+  "name": "muse-spark-two-models",
+  "description": "FORGE-0 with two Meta models in two roles: Muse Spark 1.3 (Meta Model API) forms the hypotheses; the open-weights Muse Spark Open (OpenAI-compatible endpoint, e.g. Baseten) designs the experiments and writes the repairs. Requires META_API_KEY and OPENAI_COMPAT_API_KEY/BASE_URL/MODEL.",
+  "provider": "meta",
+  "model": "muse-spark-1.3",
+  "secondary_provider": "openai",
+  "secondary_tasks": "experiments,repair",
+  "reasoning_effort": "medium",
+  "structured_output": "json_schema",
+  "max_tokens": 8192,
+  "temperature": 0.2,
+  "systems": ["forge"],
+  "defects": ["D6-layered-refund", "R1-parse-microseconds"],
+  "repeats": 1,
+  "require_real_provider": true,
+  "max_estimated_cost_usd": 10,
+  "max_spend_usd": 3,
+  "budgets": {
+    "max_model_calls": 16,
+    "max_experiments": 8,
+    "max_repair_attempts": 3,
+    "max_experiment_rounds": 3,
+    "time_budget_s": 1800
+  },
+  "notes": "A smoke test of the routing, not a capability comparison. The secondary model's structured output falls back to json_object (OPENAI_COMPAT_STRUCTURED_OUTPUT)."
+}

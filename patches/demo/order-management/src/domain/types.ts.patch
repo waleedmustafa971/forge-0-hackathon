@@ -1,0 +1,28 @@
+diff --git a/demo/order-management/src/domain/types.ts b/demo/order-management/src/domain/types.ts
+index 9678430..bfce226 100644
+--- a/demo/order-management/src/domain/types.ts
++++ b/demo/order-management/src/domain/types.ts
+@@ -29,6 +29,18 @@ export interface InventoryRecord {
+   available: number;
+ }
+ 
++export interface RefundRecord {
++  id: string;
++  orderId: string;
++  amount: number;
++  createdAt: string;
++}
++
++export interface GiftCard {
++  code: string;
++  balance: number;
++}
++
+ export interface PaymentRecord {
+   id: string;
+   orderId: string;
+@@ -48,3 +60,4 @@ export class InvalidTransitionError extends DomainError {}
+ export class InsufficientStockError extends DomainError {}
+ export class ValidationError extends DomainError {}
+ export class FulfillmentError extends DomainError {}
++export class InvalidGiftCardError extends DomainError {}

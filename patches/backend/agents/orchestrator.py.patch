@@ -1,0 +1,146 @@
+diff --git a/backend/agents/orchestrator.py b/backend/agents/orchestrator.py
+index 9784caa..c25580d 100644
+--- a/backend/agents/orchestrator.py
++++ b/backend/agents/orchestrator.py
+@@ -47,6 +47,13 @@ NAME = "orchestrator"
+ MIN_REPAIR_CONFIDENCE = 0.5
+ 
+ 
++MODE_LABELS = {
++    "forge": "System B (hypothesis-driven)",
++    "baseline": "Baseline A (direct one-shot repair)",
++    "iterative": "Baseline C (iterative edit-test agent)",
++}
++
++
+ def _now() -> datetime:
+     return datetime.now(UTC)
+ 
+@@ -109,9 +116,7 @@ class Orchestrator:
+                 budget=budget,
+                 workspaces_keep=settings.keep_workspaces,
+             )
+-        mode_label = (
+-            "System B (hypothesis-driven)" if ctx.mode == "forge" else "Baseline A (direct one-shot repair)"
+-        )
++        mode_label = MODE_LABELS.get(ctx.mode, ctx.mode)
+         ctx.emit(
+             NAME,
+             "started",
+@@ -155,12 +160,14 @@ class Orchestrator:
+                     round=0,
+                     designed_by="investigator",
+                     kind="reproduction",
+-                    objective="Control: re-run the target test in isolation to confirm it reproduces",
++                    objective="Control: re-run the target test to confirm it reproduces",
+                     hypothesis_keys=[],
+                     predictions=[],
+                     spec={
+                         "run": [report.target_failure.file],
+-                        "test_name_pattern": isolation_pattern(report.target_failure.test_name),
++                        "test_name_pattern": None
++                        if report.flakiness and report.flakiness.file_run == "failed"
++                        else isolation_pattern(report.target_failure.test_name),
+                         "files": [],
+                         "source_edits": [],
+                     },
+@@ -168,7 +175,10 @@ class Orchestrator:
+                     outcome=outcome,
+                     result=_result_payload(run),
+                     evaluation={
+-                        "detail": "reproduced" if report.reproduction_confirmed else "did not reproduce"
++                        "detail": report.flakiness.summary
++                        if report.flakiness
++                        else ("reproduced" if report.reproduction_confirmed else "did not reproduce"),
++                        "flakiness": dump(report.flakiness) if report.flakiness else None,
+                     },
+                     attempts=1,
+                     started_at=_now(),
+@@ -299,7 +309,7 @@ class Orchestrator:
+         evaluations: list[dict[str, Any]] = []
+         snapshot_before = self.beliefs.snapshot()
+         if run.outcome in ("pass", "fail"):
+-            evaluations = evaluate(predictions, run.outcome, output)
++            evaluations = evaluate(predictions, run.outcome, output, run.runtime_failure)
+             apply_evidence(self.beliefs, key, evaluations, bool(spec["discriminating"]))
+             self._sync_beliefs()
+         evaluation = {
+@@ -308,7 +318,7 @@ class Orchestrator:
+             "belief_before": snapshot_before,
+             "belief_after": self.beliefs.snapshot(),
+             "intervention_diff": run.intervention_diff,
+-            "informative": bool(evaluations),
++            "informative": any(e["matched"] is not None for e in evaluations),
+         }
+         with session_scope() as db:
+             row = db.get(Experiment, row_id)
+@@ -334,7 +344,7 @@ class Orchestrator:
+             }
+         )
+         matched = [e["hypothesis"] for e in evaluations if e["matched"]]
+-        contradicted = [e["hypothesis"] for e in evaluations if not e["matched"]]
++        contradicted = [e["hypothesis"] for e in evaluations if e["matched"] is False]
+         ctx.emit(
+             "experiment_executor",
+             "experiment_result",
+@@ -547,6 +557,51 @@ class Orchestrator:
+             claimed_fixed=bool(draft.edits),
+         )
+ 
++    # ------------------------------------------------------------ iterative flow
++    def iterative_attempts(self) -> int:
++        """Baseline C gets as many model calls as FORGE-0's loop: hypotheses + experiment rounds + repairs."""
++        budget = self.ctx.budget if self.ctx else None
++        assert budget is not None
++        return 1 + budget.max_experiment_rounds + budget.max_repair_attempts
++
++    def _iterative(self, report: InvestigationReport) -> None:
++        ctx = self.ctx
++        assert ctx is not None and report.target_failure is not None
++        engineer = RepairEngineer(ctx)
++        verifier = IndependentVerifier(ctx)
++        previous: list[dict[str, Any]] = []
++        attempts = self.iterative_attempts()
++        for attempt in range(attempts):
++            draft = engineer.propose_iterative(report, previous, attempt)
++            verification = self._evaluate_patch(
++                draft, attempt, report.target_failure.test_name, engineer, verifier
++            )
++            if verification is None:
++                break  # the agent gave up (no edits)
++            if verification.verdict == "verified":
++                self._finish(
++                    "verified_fix",
++                    f"Baseline C's patch P{attempt + 1} passed the test suite after {attempt + 1} "
++                    f"edit-test iteration(s): {verification.reasons[0]}",
++                    report,
++                )
++                return
++            previous.append(
++                {
++                    "attempt": attempt + 1,
++                    "summary": draft.summary,
++                    "edits": [e.model_dump() for e in draft.edits],
++                    "test_results": verification.reasons,
++                    "regressions": verification.regressions,
++                    "target_after_patch": verification.target_patched,
++                }
++            )
++        self._finish(
++            "no_verified_fix",
++            f"Baseline C found no patch that passes the test suite in {len(previous) or 1} iteration(s).",
++            report,
++        )
++
+     # -------------------------------------------------------------------- finish
+     def _finish(
+         self, verdict: str, message: str, report: InvestigationReport, claimed_fixed: bool | None = None
+@@ -607,6 +662,8 @@ class Orchestrator:
+                 return
+             if ctx.mode == "baseline":
+                 self._baseline(report)
++            elif ctx.mode == "iterative":
++                self._iterative(report)
+             else:
+                 self._forge(report)
+         except InvestigationCancelledError as exc:

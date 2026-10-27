@@ -1,0 +1,168 @@
+diff --git a/docs/HACKATHON_SUBMISSION.md b/docs/HACKATHON_SUBMISSION.md
+index c5a1f09..27ea900 100644
+--- a/docs/HACKATHON_SUBMISSION.md
++++ b/docs/HACKATHON_SUBMISSION.md
+@@ -5,82 +5,98 @@
+ ## One-liner
+ 
+ FORGE-0 is an autonomous debugger that refuses to guess: it proposes competing root-cause
+-hypotheses, runs counterfactual experiments in an isolated sandbox to rule them out, and only
+-offers a repair after an independent verifier has proven it fixes the bug without breaking anything.
++hypotheses, runs experiments in an isolated sandbox to rule them out, and only offers a repair, as a
++GitHub pull request with the evidence attached, after an independent verifier has proven it fixes
++the bug without breaking anything.
+ 
+ ## The problem
+ 
+ AI coding assistants are confident patch generators. They read a stack trace, pick the first
+-plausible story, and emit a diff. When that story is wrong, the patch looks right, sometimes even
+-makes the failing test pass, and quietly breaks something else. Developers end up verifying the AI
+-instead of the code.
++plausible story, and emit a diff. When that story is wrong, the patch looks right and quietly fails
++or breaks something else. Developers end up verifying the AI instead of the code. Agents that run
++the tests and retry fix more, but they still hand a reviewer a diff with no explanation of *why* it
++is right.
+ 
+ ## What FORGE-0 does differently
+ 
+-1. **Competing hypotheses, not a single guess.** Every investigation starts with at least two
+-   mutually exclusive explanations, each with a prior.
+-2. **Experiments with predictions.** For each experiment, every hypothesis must say in advance
+-   whether it will pass or fail. That includes *counterfactual interventions*: "if `reserve` used
+-   the transaction handle, would the original failure disappear?", executed on a disposable copy.
+-3. **Bayesian bookkeeping.** Observed outcomes update the ranking. Hypotheses are refuted by
+-   evidence, and confirmation requires a *discriminating* experiment.
+-4. **Independent verification.** Patches are re-applied to fresh copies; the whole suite runs before
+-   and after; the target is re-run in isolation. Any regression rejects the patch, and the reasons go
+-   back to the Repair Engineer.
+-5. **A full audit trail.** Every hypothesis, prediction, execution, belief update and decision is
+-   persisted and streamed live to the dashboard, then compiled into an evidence report for human
+-   review. FORGE-0 never applies a patch to your code.
+-
+-## Why Muse Spark
+-
+-FORGE-0's model-facing work is structured reasoning under uncertainty: generating rival
+-explanations, designing tests that separate them, and writing minimal patches that respect the
+-evidence. The integration targets `muse-spark-1.3` on the Meta Model API with JSON-schema
+-structured outputs, configurable `reasoning_effort`, and the documented `max_completion_tokens`
+-contract. Every model contract is a Pydantic schema, so the same prompts and validators work
+-unchanged when the key is added.
+-
+-## What is built (and verified)
+-
+-* Seven-agent pipeline (Investigator, Hypothesis Generator, Experiment Designer, Executor, Repair
+-  Engineer, Independent Verifier, Orchestrator) with budgets for time, model calls, experiments,
+-  rounds and repair attempts.
+-* Hardened Docker sandbox: no network, read-only root filesystem, tmpfs workspace streamed over
+-  stdin (no host mounts), non-root, capabilities dropped, CPU/memory/PID/file limits, dual
+-  timeouts, allowlisted runners only. Isolation is verified by integration tests.
+-* FastAPI backend, PostgreSQL + Alembic, Server-Sent Events, Markdown/JSON evidence reports.
+-* React dashboard: live agent pipeline, hypotheses with confidence history, experiment timeline with
+-  predictions vs observations, patch review with test-by-test deltas, evaluation page, settings.
+-* A TypeScript order-management service with five planted defects (concurrency, retries,
+-  transactions, async errors, validation), reference fixes and hidden tests kept away from agents.
+-* An evaluation harness comparing a one-shot baseline with FORGE-0, scored by hidden tests.
+-* 75 backend tests (incl. 11 against real Docker/PostgreSQL), 9 frontend tests, CI with lint,
+-  type checks, builds, integration tests, gitleaks and dependency audits.
+-
+-## Honest status
+-
+-* **No real Muse Spark inference has run yet.** API access was not available during the build. All
+-  demo runs use the mock provider, whose outputs are scripted fixtures and are labelled *simulated*
+-  in the UI, API and reports. Executions and verifications are real.
+-* The baseline-vs-FORGE-0 numbers in `docs/EVALUATION.md` come from that mock run. They validate the
+-  pipeline, not model capability. The real comparison is one command away once a key is configured.
+-* The sandbox currently supports Node.js projects (Python runner provided, less tested); dependency
+-  installation inside the offline sandbox is not supported.
+-
+-## Demo video script (≈2:45)
++1. **Competing hypotheses, not a single guess**, each with a prior.
++2. **Experiments with predictions.** Every hypothesis says in advance whether each experiment will
++   pass or fail, including *counterfactual interventions* executed on a disposable copy.
++3. **Bayesian bookkeeping.** Outcomes update the ranking; confirmation requires a *discriminating*
++   experiment.
++4. **Flaky-test triage** before any hypothesis: deterministic, intermittent or order-dependent.
++5. **Independent verification** on fresh copies: full suite before and after, isolated re-runs.
++6. **Evidence where developers work**: a pull request whose description is the evidence, or an
++   issue comment explaining why no fix survived. It never opens a PR for an unverified patch.
++
++## Prior work vs. hackathon work
++
++The hackathon allows building on an existing project if only the new work is showcased.
++
++**Before the hackathon** (commits up to `0d3dde1`, 2026-10-19): the seven-agent pipeline, the
++hardened Docker sandbox, the verifier, the dashboard, the mock provider, a Meta provider written to
++the documented contract but never run, five planted defects (D1–D5) and a one-shot benchmark. No
++real model had been run.
++
++**During the hackathon** (from 2026-10-27):
++
++* First real runs on **Muse Spark 1.3**, and the fixes they exposed (truncated replies retried with
++  a higher limit; runtime failures no longer scored as evidence against correct predictions).
++* **Two Meta models in two roles**: Muse Spark 1.3 forms hypotheses; open-weights **Muse Spark
++  Open** (Baseten) designs experiments and writes repairs.
++* A **fair baseline** (edit → run tests → retry, same call budget) and a three-way benchmark with
++  hidden-test scoring and a live spend guard.
++* **Harder defects** D6–D9, each designed to defeat a one-shot fix, and a **real open-source bug**
++  (R1, `parse` issue #162) that made the **pytest** runner real.
++* **Flaky-test triage** and a verifier that adapts its re-runs to it.
++* **GitHub integration**: `forge0-ci` and a workflow template.
++* Ranked context selection so root causes two imports away are not cut.
++
++## Use of Meta AI
++
++* **Muse Spark 1.3** via the Meta Model API: JSON-schema structured outputs, `reasoning_effort`,
++  the `max_completion_tokens` contract, usage accounting including cached and reasoning tokens.
++* **Muse Spark Open** (`meta-models/muse-spark-open-1026`) on Baseten through the
++  OpenAI-compatible provider, routed per task, so the open-weights model does the high-volume work
++  (experiment plans, repairs) and the hosted model does the hypothesis reasoning.
++
++## Results (real, 2026-10-27)
++
++Muse Spark 1.3, 10 defects × 3 repeats, scored by hidden tests no system saw
++([EVALUATION.md](EVALUATION.md)):
++
++| | One-shot | Edit-test loop | FORGE-0 |
++| --- | --- | --- | --- |
++| Fixed | 28/30 | 30/30 | 30/30 |
++| False fix claims | 2 | 0 | 0 |
++| Cost per investigation | $0.012 | $0.013 | $0.071 |
++
++Said plainly: an edit-test loop matches FORGE-0's fix rate on this set at a fifth of the cost. The
++one-shot baseline is the one that ships broken fixes. FORGE-0 adds the evidence behind each fix,
++which is what lets a reviewer merge a bot's pull request with confidence. The two-model
++configuration fixed both defects it was run on (D6, R1).
++
++We then pre-registered three harder defects and an open-weights arm, with predictions, before
++running them ([benchmarks/preregistration](../benchmarks/preregistration/2026-10-27-harder-defects.md)).
++On Muse Spark 1.3 all three systems fixed D10–D12 9/9, so the predictions were wrong. With Muse
++Spark Open as the only model, the loop fixed 38/39 (one false claim) and FORGE-0 30/39 (none):
++seven FORGE-0 runs died in the experiment-design call, where the model used its whole token budget
++reasoning. FORGE-0 does not beat the loop on fix rate on anything we measured; we report that
++rather than re-tune the defects.
++
++## Demo video script (≈3:00, hackathon work only)
+ 
+ | Time | Screen | Narration |
+ | --- | --- | --- |
+-| 0:00–0:15 | Dashboard | "AI assistants write patches fast, and they're often confidently wrong. FORGE-0 is a debugger that has to *prove* its fix before you ever see it." |
+-| 0:15–0:35 | Repository Explorer → Run in sandbox | "Here's an order-management service with five real-world defects. FORGE-0 runs its suite in a locked-down container with no network, read-only, non-root: 14 pass, 5 fail." |
+-| 0:35–0:55 | Start investigation (concurrency defect) | "Let's investigate the lost-update bug. First the investigator reproduces the failure in isolation. Then the model proposes three competing explanations: a race, storage aliasing, or a logic error." |
+-| 0:55–1:30 | Workspace: experiments + confidence bars | "Each experiment states in advance what each hypothesis predicts. Sequential additions pass: the logic-error theory is refuted. The database isolates rows: aliasing is refuted. Then a counterfactual: serialize `addItem` in a throw-away copy, and the failure vanishes. The race hypothesis is confirmed at 96%." |
+-| 1:30–1:50 | Patch review | "Only now does it write a patch: a per-order mutex. An independent verifier re-runs the whole suite on fresh copies. Target fixed three out of three times, zero regressions." |
+-| 1:50–2:15 | Payment investigation, rejected P1 | "Here's why verification matters. On the double-charge bug, the first patch fixes the failing test but breaks separate captures for the same order. The verifier rejects it and feeds that back, and the second patch is accepted." |
+-| 2:15–2:35 | Evaluation page | "Against a one-shot baseline, FORGE-0 never claims a fix it can't prove. These numbers come from our scripted mock run, clearly labelled; with a Muse Spark key, the same harness measures the real thing." |
+-| 2:35–2:45 | Settings → Meta Model API | "Muse Spark plugs in with one environment variable. FORGE-0: scientific debugging, with receipts." |
++| 0:00–0:15 | GitHub issue labelled `forge0` | "A refund bug is reported. Instead of a developer, FORGE-0 picks it up." |
++| 0:15–0:45 | Workflow run → investigation workspace | "Muse Spark 1.3 proposes competing explanations. The open-weights Muse Spark Open designs experiments to tell them apart. They run in an offline sandbox." |
++| 0:45–1:20 | Experiment timeline, confidence bars | "This bug has two causes. The experiments separate them: the refund amount is wrong *and* the restock races on duplicate items." |
++| 1:20–1:50 | Pull request opened by `forge0[bot]` | "Only a verified fix becomes a pull request, and its description is the evidence: what was ruled out, how, and the verification." |
++| 1:50–2:15 | Order-dependent test (D9) | "Flaky tests get triaged first: this one passes alone and fails after its neighbours, so FORGE-0 hunts for leaked state." |
++| 2:15–2:35 | Real bug R1 in `parse` | "It also fixes real bugs: this is a shipped bug from an open-source Python library, fixed and verified against the project's own regression test." |
++| 2:35–3:00 | Evaluation page | "On 30 runs, a one-shot fix shipped two broken patches. FORGE-0 shipped none, and every fix came with its evidence." |
+ 
+ ## Links
+ 
+-* Repository: private GitHub repository `forge-0` (shared with judges on request)
++* Repository: <https://github.com/waleedmustafa971/forge-0> (public at submission)
+ * Architecture: `docs/ARCHITECTURE.md` · Security: `docs/SECURITY.md` · Evaluation: `docs/EVALUATION.md`

@@ -1,0 +1,35 @@
+diff --git a/backend/sandbox/runners.py b/backend/sandbox/runners.py
+index 2daaeaa..63ecf9e 100644
+--- a/backend/sandbox/runners.py
++++ b/backend/sandbox/runners.py
+@@ -69,9 +69,28 @@ class Runner:
+                 argv.append(f"--test-name-pattern={pattern}")
+             return argv + safe
+         if self.name == "pytest":
+-            argv = ["python", "-m", "pytest", "-q", "-p", "no:cacheprovider", "--tb=short"]
++            # JUnit XML on stdout is the structured report (see sandbox/junit.py); the forge0_pytest
++            # plugin in the sandbox image gives `pattern` the same regex meaning it has for node.
++            # Project addopts are dropped: they usually enable plugins (coverage, xdist) that the
++            # offline sandbox does not have.
++            argv = [
++                "python",
++                "-m",
++                "pytest",
++                "-q",
++                "-p",
++                "no:cacheprovider",
++                "-p",
++                "forge0_pytest",
++                "--tb=short",
++                "-o",
++                "junit_family=xunit1",
++                "--junitxml=/dev/stdout",
++                "-o",
++                "addopts=",
++            ]
+             if pattern:
+-                argv += ["-k", pattern]
++                argv.append(f"--forge0-pattern={pattern}")
+             return argv + safe
+         raise RunnerValidationError(f"Unknown runner {self.name}")
+ 

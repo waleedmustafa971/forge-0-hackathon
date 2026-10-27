@@ -1,0 +1,28 @@
+{
+  "id": "D6-layered-refund",
+  "title": "Refunds short-change the customer and lose restocked units",
+  "category": "layered defects",
+  "description": "RefundService.refund has two independent faults. The refund amount sums unitPrice without multiplying by quantity, and stock is returned with Promise.all over the order lines, so two lines for the same SKU run concurrent read-modify-write cycles on one inventory row and one release is lost. The failing assertion only reports the amount; the restock fault surfaces once the amount is fixed.",
+  "trap": "The first failing assertion points at the amount. A one-shot fix of the amount leaves the target test failing on the restock race, which is only visible after re-running the test.",
+  "relevant_files": [
+    "src/services/refundService.ts",
+    "src/repositories/inventoryRepository.ts",
+    "src/db/database.ts"
+  ],
+  "reproduction": [
+    "Place an order with two lines for SKU-KEYBOARD (quantities 1 and 2) and one SKU-CABLE line, then mark it paid.",
+    "Refund it.",
+    "The refund amount ignores quantities; after fixing that, keyboard stock ends one or two units short."
+  ],
+  "failing_test": {
+    "file": "test/refunds.test.ts",
+    "name": "refunds the full amount and restocks every line of the order"
+  },
+  "expected_behavior": "The refund equals order.total, every unit of every line returns to stock, and the order is marked refunded.",
+  "regression_tests": [
+    "refuses to refund an unpaid order",
+    "refunds a single-item order and restocks it"
+  ],
+  "hidden_tests": "benchmarks/hidden-tests/D6-layered-refund.test.ts",
+  "added": "2026-10-27 (Meta hackathon)"
+}

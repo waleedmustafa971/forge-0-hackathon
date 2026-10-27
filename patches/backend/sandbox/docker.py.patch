@@ -1,0 +1,22 @@
+diff --git a/backend/sandbox/docker.py b/backend/sandbox/docker.py
+index 11ac756..0dd1df1 100644
+--- a/backend/sandbox/docker.py
++++ b/backend/sandbox/docker.py
+@@ -29,6 +29,7 @@ from pathlib import Path
+ from core.config import Settings, get_settings
+ from core.logging import redact_known
+ from core.schemas import ExecutionResult
++from sandbox.junit import parse_junit
+ from sandbox.runners import Runner, get_runner
+ from sandbox.tap import parse_tap
+ 
+@@ -268,7 +269,8 @@ class DockerSandbox:
+         infra_error = None
+         if exit_code == 125 or (exit_code is not None and "docker: Error" in stderr[:400]):
+             infra_error = stderr.strip()[:500] or "docker run failed"
+-        test_run = parse_tap(stdout) if runner.name == "node_test" else None
++        parsers = {"node_test": parse_tap, "pytest": parse_junit}
++        test_run = parsers[runner.name](stdout) if runner.name in parsers else None
+         limit = self.settings.sandbox_max_output_bytes
+         stdout_t, stdout_cut = _truncate(stdout, limit)
+         stderr_t, stderr_cut = _truncate(stderr, limit // 2)

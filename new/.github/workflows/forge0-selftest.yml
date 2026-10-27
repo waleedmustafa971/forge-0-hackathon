@@ -1,0 +1,83 @@
+# FORGE-0 on FORGE-0's own demo service: label an issue `forge0` and name a failing test of
+# demo/order-management with a line like "Failing test: <test name>". The same steps as the
+# template in integrations/github/forge0.yml, except that FORGE-0 is installed from this checkout
+# and investigates a subdirectory. Only demo/order-management is snapshotted; the defect catalog
+# and hidden tests live outside it and are never shown to the agents.
+name: FORGE-0 self-test
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  actions: write  # dispatch CI on the fix branch
+
+concurrency:
+  group: forge0-selftest-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  investigate:
+    if: github.event.label.name == 'forge0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install FORGE-0 and its sandbox image
+        run: |
+          pip install ./backend
+          docker pull node:24-alpine
+
+      - name: Describe the issue
+        env:
+          # Passed through the environment, never interpolated into the script.
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: printf '%s\n\n%s\n' "$ISSUE_TITLE" "$ISSUE_BODY" > "$RUNNER_TEMP/issue.md"
+
+      - name: Investigate with FORGE-0
+        working-directory: demo/order-management
+        env:
+          GH_TOKEN: ${{ github.token }}
+          AI_PROVIDER: meta
+          META_API_KEY: ${{ secrets.META_API_KEY }}
+          META_MODEL: muse-spark-1.3
+          AI_MAX_TOKENS: "8192"
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          forge0-ci --repo . --report-dir "$RUNNER_TEMP/forge0-report" --open-pr \
+            --base "${{ github.event.repository.default_branch }}" \
+            --issue-body-file "$RUNNER_TEMP/issue.md" --comment-issue "$ISSUE_NUMBER"
+
+      # A pull request opened with the workflow's own token starts no `pull_request` workflows
+      # (GitHub records a failed run with no jobs instead), so CI is dispatched on the fix branch:
+      # workflow_dispatch is the one event that token may trigger.
+      - name: Run CI on the fix branch
+        working-directory: demo/order-management
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          branch=$(git branch --show-current)
+          case "$branch" in
+            forge0/*) gh workflow run "ci.yml" --ref "$branch" && echo "Dispatched ci.yml on $branch" ;;
+            *) echo "No fix branch: nothing to check" ;;
+          esac
+
+      - name: Upload the evidence report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: forge0-evidence-report
+          path: ${{ runner.temp }}/forge0-report
+          if-no-files-found: ignore

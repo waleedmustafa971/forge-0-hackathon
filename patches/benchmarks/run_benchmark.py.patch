@@ -1,0 +1,274 @@
+diff --git a/benchmarks/run_benchmark.py b/benchmarks/run_benchmark.py
+index b134c17..480b65d 100644
+--- a/benchmarks/run_benchmark.py
++++ b/benchmarks/run_benchmark.py
+@@ -47,14 +47,21 @@ DISCLAIMER_MOCK = (
+ )
+ DISCLAIMER_REAL = (
+     "Real-model evaluation: every model output came from the configured provider; all executions, "
+-    "verifications and hidden-test evaluations were run in the sandbox. Small sample (5 defects) - treat "
++    "verifications and hidden-test evaluations were run in the sandbox. Small sample (9 defects) - treat "
+     "rates as indicative, not statistically significant."
+ )
+ 
++# Planted demo defects, then real bugs from open-source projects (see demo/real-world/README.md).
++DEFECT_CATALOGS = [ROOT / "demo" / "defects", ROOT / "demo" / "real-world" / "cases"]
++DEFAULT_REPOSITORY = "demo/order-management"
++HIDDEN_DIRS = {"node_test": "test/hidden", "pytest": "tests/hidden"}
++
+ # Worst-case prompt size per model request (observed FORGE-0 prompts are ~6-8k tokens).
+ PROMPT_TOKENS_UPPER_BOUND = 10_000
+-# Each model call may take one schema-repair round (a second request).
+-REQUESTS_PER_CALL_UPPER_BOUND = 2
++# Each model call may retry a truncated reply once with twice the output limit, then take one
++# schema-repair round at that limit: three requests, filling max_tokens + 2 x (2 x max_tokens).
++REQUESTS_PER_CALL_UPPER_BOUND = 3
++TRUNCATION_TOKENS_CEILING = 32_768  # OpenAICompatibleProvider.MAX_TRUNCATION_TOKENS
+ 
+ CONFIG_ENV = {
+     "provider": "AI_PROVIDER",
+@@ -63,6 +70,8 @@ CONFIG_ENV = {
+     "structured_output": "META_STRUCTURED_OUTPUT",
+     "max_tokens": "AI_MAX_TOKENS",
+     "temperature": "AI_TEMPERATURE",
++    "secondary_provider": "AI_SECONDARY_PROVIDER",
++    "secondary_tasks": "AI_SECONDARY_TASKS",
+ }
+ BUDGET_ENV = {
+     "max_model_calls": "MAX_MODEL_CALLS",
+@@ -93,6 +102,11 @@ def parse_args() -> argparse.Namespace:
+         action="store_true",
+         help="record investigations in DATABASE_URL (visible in the dashboard) instead of a temporary SQLite DB",
+     )
++    parser.add_argument(
++        "--keep-workdir",
++        action="store_true",
++        help="keep the temporary SQLite DB and workspaces for post-mortem inspection",
++    )
+     return parser.parse_args()
+ 
+ 
+@@ -113,7 +127,7 @@ def load_config(args: argparse.Namespace) -> dict[str, Any]:
+     config.setdefault("repeats", 1)
+     config.setdefault("budgets", {})
+     config.setdefault("require_real_provider", config["provider"] != "mock")
+-    unknown_systems = set(config["systems"]) - {"baseline", "forge"}
++    unknown_systems = set(config["systems"]) - {"baseline", "iterative", "forge"}
+     if unknown_systems or config["repeats"] < 1:
+         raise SystemExit(f"Invalid config: systems {sorted(unknown_systems)} / repeats {config['repeats']}")
+     return config
+@@ -140,11 +154,14 @@ def configure_environment(args: argparse.Namespace, config: dict[str, Any], work
+ 
+ 
+ def worst_case_cost(config: dict[str, Any], defects: int, runtime: Any, settings: Any) -> dict[str, Any]:
+-    calls_per_system = {"baseline": 1, "forge": runtime.max_model_calls}
++    budgets = config["budgets"]
++    iterative = 1 + budgets.get("max_experiment_rounds", 3) + budgets.get("max_repair_attempts", 3)
++    calls_per_system = {"baseline": 1, "iterative": iterative, "forge": runtime.max_model_calls}
+     calls = sum(calls_per_system[s] for s in config["systems"]) * defects * config["repeats"]
+     requests = calls * REQUESTS_PER_CALL_UPPER_BOUND
+     input_tokens = requests * PROMPT_TOKENS_UPPER_BOUND
+-    output_tokens = requests * runtime.max_tokens
++    raised = min(2 * runtime.max_tokens, max(runtime.max_tokens, TRUNCATION_TOKENS_CEILING))
++    output_tokens = calls * (runtime.max_tokens + 2 * raised)
+     usd = (
+         input_tokens / 1e6 * settings.ai_price_input_per_m
+         + output_tokens / 1e6 * settings.ai_price_output_per_m
+@@ -155,8 +172,9 @@ def worst_case_cost(config: dict[str, Any], defects: int, runtime: Any, settings
+         "input_tokens": input_tokens,
+         "output_tokens": output_tokens,
+         "usd": round(usd, 2),
+-        "assumptions": f"every call hits the model-call budget, uses a schema-repair round, sends "
+-        f"{PROMPT_TOKENS_UPPER_BOUND:,} prompt tokens and fills max_completion_tokens; no cache discount",
++        "assumptions": f"every call hits the model-call budget, is truncated once, uses a schema-repair "
++        f"round, sends {PROMPT_TOKENS_UPPER_BOUND:,} prompt tokens and fills every output limit; "
++        "no cache discount",
+     }
+ 
+ 
+@@ -170,8 +188,8 @@ def main() -> int:
+     from core.config import get_settings
+     from core.database import init_db, session_scope
+     from core.logging import configure_logging
+-    from core.models import Investigation, Patch
+-    from core.schemas import SourceEdit
++    from core.models import Investigation, ModelCall, Patch
++    from core.schemas import RuntimeProfile, SourceEdit
+     from providers.registry import build_provider
+     from sandbox.docker import WslKeepAlive, get_sandbox
+     from sandbox.tap import find_test
+@@ -182,11 +200,11 @@ def main() -> int:
+     settings = get_settings()
+     configure_logging(settings.log_level, settings.log_format)
+ 
+-    defects_dir = ROOT / "demo" / "defects"
+     wanted = set(config["defects"])
+     defects = [
+         json.loads((d / "defect.json").read_text(encoding="utf-8"))
+-        for d in sorted(defects_dir.iterdir())
++        for catalog in DEFECT_CATALOGS
++        for d in sorted(catalog.iterdir())
+         if d.is_dir() and (not wanted or d.name in wanted)
+     ]
+     missing = wanted - {d["id"] for d in defects}
+@@ -248,19 +266,23 @@ def main() -> int:
+             print("This run spends real API tokens. Re-run with --yes to confirm.", file=sys.stderr)
+             return 4
+ 
++        # Each defect names the repository it lives in (default: the order-management demo).
++        repos: dict[str, tuple[str, Path, RuntimeProfile]] = {}
+         with session_scope() as db:
+-            repo = import_local(
+-                db, str(settings.demo_repo_path), name="order-management (benchmark)", source_type="local"
+-            )
+-            repo_id, snapshot = repo.id, Path(repo.snapshot_path)
++            for rel in sorted({d.get("repository", DEFAULT_REPOSITORY) for d in defects}):
++                repo = import_local(db, str(ROOT / rel), name=f"{Path(rel).name} (benchmark)")
++                runtime = RuntimeProfile.model_validate(repo.profile["runtime"])
++                repos[rel] = (repo.id, Path(repo.snapshot_path), runtime)
+ 
+         def evaluate(defect: dict[str, Any], edits: list[dict[str, Any]]) -> dict[str, Any]:
+             """Independent evaluation on a fresh copy, including hidden tests."""
+             target = f"{defect['failing_test']['name']}"
++            _, snapshot, runtime = repos[defect.get("repository", DEFAULT_REPOSITORY)]
++            assert runtime.runner is not None
+             copy = workdir / f"eval-{defect['id']}-{time.monotonic_ns()}"
+             shutil.copytree(snapshot, copy)
+             try:
+-                baseline_run = get_sandbox().run_tests(copy, "node_test", ["test/**/*.test.ts"])
++                baseline_run = get_sandbox().run_tests(copy, runtime.runner, runtime.test_targets)
+                 try:
+                     apply_edits(
+                         copy, [SourceEdit(**e) for e in edits], allow_test_files=False, allow_create=True
+@@ -268,9 +290,13 @@ def main() -> int:
+                 except EditError as exc:
+                     return {"applied": False, "error": str(exc), "actually_fixed": False, "regressions": 0}
+                 hidden_src = ROOT / defect["hidden_tests"]
+-                (copy / "test" / "hidden").mkdir(parents=True, exist_ok=True)
+-                shutil.copy(hidden_src, copy / "test" / "hidden" / hidden_src.name)
+-                run = get_sandbox().run_tests(copy, "node_test", ["test/**/*.test.ts"])
++                hidden_dir = HIDDEN_DIRS[runtime.runner]
++                (copy / hidden_dir).mkdir(parents=True, exist_ok=True)
++                shutil.copy(hidden_src, copy / hidden_dir / hidden_src.name)
++                targets = list(runtime.test_targets)
++                if runtime.runner == "pytest":  # pytest runs the listed files, so name the hidden one too
++                    targets.append(f"{hidden_dir}/{hidden_src.name}")
++                run = get_sandbox().run_tests(copy, runtime.runner, targets)
+                 if run.infra_error or not run.test_run:
+                     return {
+                         "applied": True,
+@@ -287,7 +313,7 @@ def main() -> int:
+                 hidden = [
+                     t
+                     for t in run.test_run.tests
+-                    if t.name.startswith("[hidden]") or (t.file or t.name).startswith("test/hidden/")
++                    if t.name.startswith("[hidden]") or (t.file or t.name).startswith(f"{hidden_dir}/")
+                 ]
+                 hidden_ok = bool(hidden) and all(t.status == "passed" for t in hidden)
+                 target_result = find_test(run.test_run, target)
+@@ -305,8 +331,16 @@ def main() -> int:
+                 shutil.rmtree(copy, ignore_errors=True)
+ 
+         scenarios = []
++        # The worst-case estimate is a loose upper bound; this caps what the run actually spends.
++        spend_cap = config.get("max_spend_usd")
++        spent = 0.0
++        stopped_early: str | None = None
+         for repeat in range(1, config["repeats"] + 1):
++            if stopped_early:
++                break
+             for defect in defects:
++                if stopped_early:
++                    break
+                 target_name = defect["failing_test"]["name"]
+                 entry: dict[str, Any] = {
+                     "defect": defect["id"],
+@@ -317,12 +351,14 @@ def main() -> int:
+                     "systems": {},
+                 }
+                 for system in systems:
++                    if stopped_early:
++                        break
+                     label = f"[{defect['id']} #{repeat}] {system}"
+                     print(f"{label} running ...", flush=True)
+                     started = time.monotonic()
+                     with session_scope() as db:
+                         inv = Investigation(
+-                            repository_id=repo_id,
++                            repository_id=repos[defect.get("repository", DEFAULT_REPOSITORY)][0],
+                             title=f"[benchmark {config['name']}] {defect['id']} #{repeat} - {system}",
+                             target_test=target_name,
+                             mode=system,
+@@ -345,12 +381,16 @@ def main() -> int:
+                         summary = inv.summary or {}
+                         usage = inv.usage or {}
+                         report = inv.investigation_report or {}
+-                        if system == "baseline":
++                        if system == "baseline":  # one-shot: its single patch is its claim
+                             claimed = next((p for p in patches if p.edits), None)
+                         else:
+                             claimed = next((p for p in patches if p.status == "verified"), None)
+                         claimed_edits = list(claimed.edits) if claimed else []
+                         verifier_verdict = (claimed.verification or {}).get("verdict") if claimed else None
++                        calls_by_model: dict[str, dict[str, int]] = {}
++                        for call in db.query(ModelCall).filter_by(investigation_id=inv_id):
++                            tasks = calls_by_model.setdefault(f"{call.provider}/{call.model}", {})
++                            tasks[call.task] = tasks.get(call.task, 0) + 1
+                         metrics: dict[str, Any] = {
+                             "investigation_id": inv_id,
+                             "status": inv.status,
+@@ -374,6 +414,7 @@ def main() -> int:
+                             "simulated": inv.simulated,
+                             "provider": inv.provider,
+                             "model": inv.model,
++                            "calls_by_model": calls_by_model,  # which model served which task
+                             "message": summary.get("message"),
+                         }
+                     if config["require_real_provider"] and metrics["simulated"]:
+@@ -400,7 +441,12 @@ def main() -> int:
+                         f"tokens={metrics['total_tokens']} time={metrics['duration_s']}s",
+                         flush=True,
+                     )
+-                scenarios.append(entry)
++                    spent += metrics["estimated_cost_usd"]
++                    if spend_cap is not None and spent > spend_cap:
++                        stopped_early = f"actual spend ${spent:.2f} exceeded max_spend_usd={spend_cap}"
++                        print(f"STOPPING EARLY: {stopped_early}; writing partial results", flush=True)
++                if entry["systems"]:
++                    scenarios.append(entry)
+ 
+         def aggregate(system: str) -> dict[str, Any]:
+             rows = [s["systems"][system] for s in scenarios if system in s["systems"]]
+@@ -460,6 +506,8 @@ def main() -> int:
+                 "note": "Muse Spark 1.3 standard-mode list price; for mock runs the cost is hypothetical",
+             },
+             "worst_case_estimate": estimate,
++            "spent_usd": round(spent, 4),
++            "stopped_early": stopped_early,
+             "metric_definitions": {
+                 "reproduction_rate": "Share of runs whose target test failed again when re-run in isolation",
+                 "verified_repair_rate": "Share of runs whose claimed patch passes the target test, the hidden "
+@@ -490,13 +538,20 @@ def main() -> int:
+         return 0
+     finally:
+         keepalive.stop()
+-        shutil.rmtree(workdir, ignore_errors=True)
++        if args.keep_workdir:
++            print(f"Kept work directory {workdir}")
++        else:
++            shutil.rmtree(workdir, ignore_errors=True)
+ 
+ 
+ def render_html(result: dict[str, Any]) -> str:
+     agg = result["aggregate"]
+-    names = {"baseline": "Baseline A · one-shot", "forge": "System B · FORGE-0"}
+-    colors = {"baseline": "#8a929d", "forge": "#e8a33d"}
++    names = {
++        "baseline": "Baseline A · one-shot",
++        "iterative": "Baseline C · edit-test loop",
++        "forge": "System B · FORGE-0",
++    }
++    colors = {"baseline": "#8a929d", "iterative": "#6ea8e6", "forge": "#e8a33d"}
+ 
+     def bars(label: str, key: str, fmt, maximum: float | None = None) -> str:
+         values = {s: float(agg[s][key]) for s in agg}

@@ -1,0 +1,28 @@
+diff --git a/frontend/src/pages/investigation/Report.tsx b/frontend/src/pages/investigation/Report.tsx
+index 1a85c8d..f3bc6f9 100644
+--- a/frontend/src/pages/investigation/Report.tsx
++++ b/frontend/src/pages/investigation/Report.tsx
+@@ -51,7 +51,7 @@ export default function Report({ id, status }: { id: string; status: string }) {
+             <div className="stack-sm">
+               <code>{r.target_failure.test_name}</code>
+               <pre className="code wrap">{r.target_failure.error}</pre>
+-              <span className="small muted">Reproduced in isolation: {String(r.reproduced)}</span>
++              <span className="small muted">Reproduced: {String(r.reproduced)}</span>
+             </div>
+           ) : (
+             <Empty>None.</Empty>
+@@ -109,8 +109,12 @@ export default function Report({ id, status }: { id: string; status: string }) {
+                       {e.intervention ? ' · counterfactual' : ''} · {e.evaluation?.detail}
+                     </div>
+                     {e.evaluation?.predictions?.map((p) => (
+-                      <div key={p.hypothesis} className="small" style={{ color: p.matched ? 'var(--green)' : 'var(--red)' }}>
+-                        {p.matched ? '✔' : '✘'} {p.hypothesis}: {p.reason}
++                      <div
++                        key={p.hypothesis}
++                        className="small"
++                        style={{ color: p.matched == null ? undefined : p.matched ? 'var(--green)' : 'var(--red)' }}
++                      >
++                        {p.matched == null ? '·' : p.matched ? '✔' : '✘'} {p.hypothesis}: {p.reason}
+                       </div>
+                     ))}
+                   </td>

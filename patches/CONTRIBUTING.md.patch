@@ -1,0 +1,13 @@
+diff --git a/CONTRIBUTING.md b/CONTRIBUTING.md
+index c8cffb2..3fcf0ad 100644
+--- a/CONTRIBUTING.md
++++ b/CONTRIBUTING.md
+@@ -21,7 +21,7 @@ npm run lint && npm run typecheck && npm test && npm run build
+ # demo service
+ cd demo/order-management
+ npm ci && npm run typecheck
+-node --test "test/**/*.test.ts"                  # must report exactly 14 pass / 5 fail
++node --test "test/**/*.test.ts"                  # must report exactly 31 pass / 12 fail
+ ```
+ 
+ ## Ground rules

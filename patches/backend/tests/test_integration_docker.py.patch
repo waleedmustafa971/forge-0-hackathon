@@ -1,0 +1,43 @@
+diff --git a/backend/tests/test_integration_docker.py b/backend/tests/test_integration_docker.py
+index 1b4fedf..ee4f0a8 100644
+--- a/backend/tests/test_integration_docker.py
++++ b/backend/tests/test_integration_docker.py
+@@ -16,6 +16,9 @@ from services.workspace import add_files, apply_edits
+ 
+ pytestmark = pytest.mark.docker
+ 
++DEFECT_DIRS = sorted(d for d in (REPO_ROOT / "demo" / "defects").iterdir() if d.is_dir())
++PASSING_TESTS = 31  # demo tests that pass with every planted defect in place
++
+ PROBE = """import assert from 'node:assert/strict';
+ import { it } from 'node:test';
+ import { writeFileSync } from 'node:fs';
+@@ -49,8 +52,8 @@ def test_demo_suite_reports_exactly_the_planted_failures(sandbox, demo_copy):
+     result = sandbox.run_tests(demo_copy, "node_test", ["test/**/*.test.ts"])
+     assert result.infra_error is None
+     run = result.test_run
+-    assert run is not None and run.total == 19
+-    assert run.failed == 5 and run.passed == 14
++    assert run is not None and run.total == PASSING_TESTS + len(DEFECT_DIRS)
++    assert run.failed == len(DEFECT_DIRS) and run.passed == PASSING_TESTS
+ 
+ 
+ def test_sandbox_isolation_guarantees(sandbox, demo_copy):
+@@ -80,7 +83,7 @@ def test_timeout_is_enforced(sandbox, demo_copy):
+ 
+ @pytest.mark.parametrize(
+     "defect_dir",
+-    sorted(d for d in (REPO_ROOT / "demo" / "defects").iterdir() if d.is_dir()),
++    DEFECT_DIRS,
+     ids=lambda p: p.name,
+ )
+ def test_reference_fix_repairs_its_defect_without_regressions(sandbox, demo_copy, defect_dir: Path):
+@@ -92,7 +95,7 @@ def test_reference_fix_repairs_its_defect_without_regressions(sandbox, demo_copy
+     assert tests[defect["failing_test"]["name"]] == "passed"
+     for name in defect["regression_tests"]:
+         assert tests[name] == "passed", name
+-    assert result.test_run.failed == 4  # the four other planted defects remain
++    assert result.test_run.failed == len(DEFECT_DIRS) - 1  # the other planted defects remain
+ 
+ 
+ @pytest.mark.parametrize(

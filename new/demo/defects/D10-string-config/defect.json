@@ -1,0 +1,27 @@
+{
+  "id": "D10-string-config",
+  "title": "Small-order quotes come out as NaN",
+  "category": "runtime configuration",
+  "description": "config/fees.json stores the handling and gift-wrap fees as JSON strings (\"2.50\", \"4.00\"). loadFees() reads the file at runtime and casts it to Fees without converting anything, so QuoteService adds a number to a string, concatenates, and the rounded total is NaN.",
+  "trap": "The JSON file is read with readFileSync, so it is never part of the code in the prompt; the failing assertion only says NaN. Converting handlingFee where it is used (or only handlingFee in the loader) passes every visible test, but the gift-wrap fee is broken the same way on a path no visible test covers (hidden tests).",
+  "relevant_files": [
+    "src/services/quoteService.ts",
+    "src/config/fees.ts",
+    "config/fees.json"
+  ],
+  "reproduction": [
+    "Quote one SKU-MOUSE (19.99), below the free-handling threshold.",
+    "The total is NaN instead of 22.49."
+  ],
+  "failing_test": {
+    "file": "test/quotes.test.ts",
+    "name": "adds the handling fee to small orders"
+  },
+  "expected_behavior": "Every fee loaded from config/fees.json is a number, so quotes with handling and with gift wrapping add up.",
+  "regression_tests": [
+    "waives handling at the free-handling threshold",
+    "rejects an empty quote"
+  ],
+  "hidden_tests": "benchmarks/hidden-tests/D10-string-config.test.ts",
+  "added": "2026-10-27 (Meta hackathon; pre-registered in benchmarks/preregistration/2026-10-27-harder-defects.md)"
+}

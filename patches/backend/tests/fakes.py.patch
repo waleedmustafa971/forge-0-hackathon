@@ -1,0 +1,27 @@
+diff --git a/backend/tests/fakes.py b/backend/tests/fakes.py
+index 875ef06..2e3152f 100644
+--- a/backend/tests/fakes.py
++++ b/backend/tests/fakes.py
+@@ -76,9 +76,12 @@ class Call:
+ class FakeSandbox:
+     docker = ["fake-docker"]
+ 
+-    def __init__(self, *, available: bool = True, break_regression: bool = False) -> None:
++    def __init__(
++        self, *, available: bool = True, break_regression: bool = False, order_dependent: bool = False
++    ) -> None:
+         self.available = available
+         self.break_regression = break_regression
++        self.order_dependent = order_dependent  # the target passes when run on its own
+         self.calls: list[Call] = []
+ 
+     def status(self, refresh: bool = False) -> SandboxStatus:  # noqa: ARG002
+@@ -111,7 +114,7 @@ class FakeSandbox:
+                 full = f"{suite} > {name}"
+                 if test_name_pattern and name not in test_name_pattern.replace("\\", ""):
+                     continue
+-                passed = full != TARGET or fixed
++                passed = full != TARGET or fixed or (self.order_dependent and test_name_pattern is not None)
+                 if self.break_regression and fixed and "separate charges" in name:
+                     passed = False
+                 results.append(

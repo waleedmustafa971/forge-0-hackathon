@@ -1,0 +1,16 @@
+{
+  "defect": "D11-closure-dedupe",
+  "rationale": "Subscribe once, when the service is constructed, instead of re-registering fresh closures on every checkout.",
+  "edits": [
+    {
+      "file": "src/services/checkoutService.ts",
+      "search": "    this.receipts = receipts;\n  }\n",
+      "replace": "    this.receipts = receipts;\n    bus.on<OrderPaid>('order.paid', (event) => this.rewards.onPaid(event));\n    bus.on<OrderPaid>('order.paid', (event) => this.receipts.onPaid(event));\n  }\n"
+    },
+    {
+      "file": "src/services/checkoutService.ts",
+      "search": "    // Subscribers are wired lazily on the first checkout; onUnique makes the repeat calls harmless.\n    this.bus.onUnique<OrderPaid>('order.paid', (event) => this.rewards.onPaid(event));\n    this.bus.onUnique<OrderPaid>('order.paid', (event) => this.receipts.onPaid(event));\n",
+      "replace": ""
+    }
+  ]
+}

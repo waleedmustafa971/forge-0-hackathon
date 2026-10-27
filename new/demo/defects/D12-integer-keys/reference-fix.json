@@ -1,0 +1,31 @@
+{
+  "defect": "D12-integer-keys",
+  "rationale": "Store each cart in a Map, whose iteration order is insertion order whatever the key, and build order items from the same lines.",
+  "edits": [
+    {
+      "file": "src/services/cartService.ts",
+      "search": "  private readonly carts = new Map<string, Record<number, CartLine>>();",
+      "replace": "  private readonly carts = new Map<string, Map<number, CartLine>>();"
+    },
+    {
+      "file": "src/services/cartService.ts",
+      "search": "    const cart = this.carts.get(customerId) ?? {};\n    const line = cart[productId];\n    if (line) line.quantity += quantity;\n    else cart[productId] = { productId, sku, quantity };",
+      "replace": "    const cart = this.carts.get(customerId) ?? new Map<number, CartLine>();\n    const line = cart.get(productId);\n    if (line) line.quantity += quantity;\n    else cart.set(productId, { productId, sku, quantity });"
+    },
+    {
+      "file": "src/services/cartService.ts",
+      "search": "    const cart = this.carts.get(customerId);\n    if (cart) delete cart[PRODUCT_IDS[sku]];",
+      "replace": "    this.carts.get(customerId)?.delete(PRODUCT_IDS[sku]);"
+    },
+    {
+      "file": "src/services/cartService.ts",
+      "search": "    return Object.values(this.carts.get(customerId) ?? {}).map((line) => ({ ...line }));",
+      "replace": "    return [...(this.carts.get(customerId)?.values() ?? [])].map((line) => ({ ...line }));"
+    },
+    {
+      "file": "src/services/cartService.ts",
+      "search": "    const cart = this.carts.get(customerId) ?? {};\n    return Object.keys(cart).map((id) => ({ sku: cart[Number(id)].sku, quantity: cart[Number(id)].quantity }));",
+      "replace": "    return this.lines(customerId).map((line) => ({ sku: line.sku, quantity: line.quantity }));"
+    }
+  ]
+}

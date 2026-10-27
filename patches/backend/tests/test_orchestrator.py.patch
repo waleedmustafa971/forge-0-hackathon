@@ -1,0 +1,39 @@
+diff --git a/backend/tests/test_orchestrator.py b/backend/tests/test_orchestrator.py
+index 55a3bb4..340cb85 100644
+--- a/backend/tests/test_orchestrator.py
++++ b/backend/tests/test_orchestrator.py
+@@ -137,3 +137,34 @@ def test_unknown_target_reports_no_failure(investigation):
+     Orchestrator(inv_id, sandbox=FakeSandbox()).run()
+     inv = load(inv_id)["inv"]
+     assert inv.verdict == "no_failure_observed"
++
++
++def test_iterative_mode_stops_at_the_first_patch_that_passes_the_suite(investigation):
++    inv_id = investigation(mode="iterative")
++    Orchestrator(inv_id, sandbox=FakeSandbox()).run()
++    state = load(inv_id)
++    assert state["inv"].verdict == "verified_fix", state["inv"].error
++    assert not state["hyps"] and [e.key for e in state["exps"]] == ["E0"]
++    assert [p.status for p in state["patches"]] == ["verified"]
++    assert [c.task for c in state["calls"]] == ["one_shot_repair"]
++
++
++def test_iterative_mode_feeds_test_results_back_after_a_rejected_patch(investigation):
++    inv_id = investigation(mode="iterative")
++    Orchestrator(inv_id, sandbox=FakeSandbox(break_regression=True)).run()
++    state = load(inv_id)
++    assert state["inv"].verdict == "no_verified_fix"
++    # the regression is reported back and a revision is requested; the mock invents none, so the loop ends
++    assert [c.task for c in state["calls"]] == ["one_shot_repair", "iterative_repair"]
++    assert [p.status for p in state["patches"]] == ["rejected", "empty"]
++
++
++def test_order_dependent_failure_counts_as_reproduced_by_the_whole_file_run(investigation):
++    inv_id = investigation()
++    Orchestrator(inv_id, sandbox=FakeSandbox(order_dependent=True)).run()
++    data = load(inv_id)
++    e0 = next(e for e in data["exps"] if e.key == "E0")
++    assert e0.outcome == "fail"
++    assert e0.spec["test_name_pattern"] is None
++    assert e0.evaluation["flakiness"]["classification"] == "order_dependent"
++    assert e0.evaluation["flakiness"]["isolated_runs"] == ["passed"] * 3

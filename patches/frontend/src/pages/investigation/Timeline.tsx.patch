@@ -1,0 +1,16 @@
+diff --git a/frontend/src/pages/investigation/Timeline.tsx b/frontend/src/pages/investigation/Timeline.tsx
+index fd7ad1b..ac899ef 100644
+--- a/frontend/src/pages/investigation/Timeline.tsx
++++ b/frontend/src/pages/investigation/Timeline.tsx
+@@ -45,8 +45,10 @@ function ExperimentDetail({ e }: { e: Experiment }) {
+                       </td>
+                       <td>{ev?.observed ?? '—'}</td>
+                       <td>
+-                        {ev ? (
++                        {ev && ev.matched != null ? (
+                           <span className={`badge ${ev.matched ? 'green' : 'red'}`}>{ev.matched ? 'consistent' : 'contradicted'}</span>
++                        ) : ev ? (
++                          <span className="faint small">untested</span>
+                         ) : (
+                           <span className="faint small">no evidence</span>
+                         )}

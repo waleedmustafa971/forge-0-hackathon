@@ -1,0 +1,42 @@
+diff --git a/backend/agents/verifier.py b/backend/agents/verifier.py
+index 2822d5c..b20262c 100644
+--- a/backend/agents/verifier.py
++++ b/backend/agents/verifier.py
+@@ -2,7 +2,8 @@
+ 
+ Re-applies the stored edits to a fresh copy (it does not trust the Repair Engineer's
+ working copy), runs the full suite on both the original and the patched code, re-runs the
+-target test in isolation, and compares behaviour test by test. A patch is accepted only
++target test (in isolation, or with its whole file when the failure is order-dependent; more
++often when it is intermittent), and compares behaviour test by test. A patch is accepted only
+ if the target test now passes every time and no previously passing test regresses.
+ """
+ 
+@@ -15,6 +16,8 @@ from sandbox.tap import find_test
+ from services.workspace import EditError, apply_edits
+ 
+ TARGET_REPEATS = 2
++# A flaky failure that passes 2 re-runs proves little; demand more evidence before accepting.
++INTERMITTENT_TARGET_REPEATS = 8
+ 
+ 
+ def _status_map(result: ExecutionResult) -> dict[str, str]:
+@@ -132,12 +135,14 @@ class IndependentVerifier:
+             ctx.budget.sandbox_runs += 2
+             repeats: list[str] = []
+             target_file = ctx.report.target_failure.file if ctx.report.target_failure else None
++            kind = ctx.report.flakiness.classification if ctx.report.flakiness else "deterministic"
++            runs = INTERMITTENT_TARGET_REPEATS if kind == "intermittent" else TARGET_REPEATS
++            # An order-dependent failure only shows when its file runs as a whole.
++            pattern = None if kind == "order_dependent" else isolation_pattern(target or "")
+             if target and target_file and not patched.infra_error:
+-                for _ in range(TARGET_REPEATS):
++                for _ in range(runs):
+                     ctx.checkpoint()
+-                    rerun = ctx.sandbox.run_tests(
+-                        patched_ws, runtime.runner, [target_file], isolation_pattern(target)
+-                    )
++                    rerun = ctx.sandbox.run_tests(patched_ws, runtime.runner, [target_file], pattern)
+                     ctx.budget.sandbox_runs += 1
+                     found = find_test(rerun.test_run, target) if rerun.test_run else None
+                     repeats.append(found.status if found else ("error" if rerun.infra_error else "missing"))

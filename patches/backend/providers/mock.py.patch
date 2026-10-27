@@ -1,0 +1,23 @@
+diff --git a/backend/providers/mock.py b/backend/providers/mock.py
+index 2e40c99..9a257d2 100644
+--- a/backend/providers/mock.py
++++ b/backend/providers/mock.py
+@@ -55,7 +55,7 @@ def _generic(task: str, context: dict[str, Any]) -> dict[str, Any]:
+             "experiments": [],
+             "conclude": True,
+         }
+-    if task in ("repair", "one_shot_repair"):
++    if task in ("repair", "one_shot_repair", "iterative_repair"):
+         return {
+             "hypothesis": "H1",
+             "summary": "[mock] No scripted repair available",
+@@ -104,6 +104,9 @@ class MockProvider(AIProvider):
+             }
+         if request.task == "one_shot_repair":
+             return scenario["one_shot_repair"]
++        if request.task == "iterative_repair":
++            # Scenarios script only a first idea for the baselines; no revisions are fabricated.
++            return _generic(request.task, ctx)
+         raise ProviderError(f"mock provider does not support task {request.task!r}")
+ 
+     def generate(self, request: AgentRequest, schema: type[T]) -> Completion[T]:

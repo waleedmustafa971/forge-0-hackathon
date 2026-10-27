@@ -1,0 +1,27 @@
+{
+  "id": "D8-stateful-regex",
+  "title": "Valid gift card codes are intermittently rejected",
+  "category": "runtime semantics",
+  "description": "GIFT_CARD_CODE is declared with the global flag. RegExp.prototype.test on a global regex is stateful: after a match it stores lastIndex and the next call starts searching from there, so consecutive checks of valid codes alternate between true and false. issue() validates the new code, which leaves lastIndex at the end of it, and the redeem() that follows rejects the same code as malformed.",
+  "trap": "The code reads correctly and the rejected code visibly matches the pattern; the cause is a runtime property of the regex object, shared by every caller of isGiftCardCode. Patching one call site (e.g. resetting lastIndex in redeem) leaves the other callers alternating.",
+  "relevant_files": [
+    "src/domain/giftCardCode.ts",
+    "src/services/giftCardService.ts"
+  ],
+  "reproduction": [
+    "Issue a gift card.",
+    "Redeem part of its balance using the returned code.",
+    "redeem() throws InvalidGiftCardError: Malformed gift card code."
+  ],
+  "failing_test": {
+    "file": "test/giftCards.test.ts",
+    "name": "redeems part of a card balance"
+  },
+  "expected_behavior": "isGiftCardCode is a pure function: a valid code is accepted every time, by every caller.",
+  "regression_tests": [
+    "issues a card with the requested balance",
+    "rejects malformed codes"
+  ],
+  "hidden_tests": "benchmarks/hidden-tests/D8-stateful-regex.test.ts",
+  "added": "2026-10-27 (Meta hackathon)"
+}
