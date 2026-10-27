@@ -56,7 +56,24 @@ none of its code is copied into this repository.
 Full results, including the losses, are in `docs/EVALUATION.md` and
 `benchmarks/preregistration/2026-10-27-harder-defects.md` (in [`patches/`](patches) and [`new/`](new)).
 
-## Run it
+## See it work, with nothing to install
+
+**Real Muse Spark runs on GitHub.** In [forge-0-demo](https://github.com/waleedmustafa971/forge-0-demo),
+labelling an issue `forge0` starts FORGE-0 in GitHub Actions on Muse Spark 1.3. Its issues and pull
+requests show the results: the PR description is the evidence (the explanations FORGE-0 considered,
+the experiments that ruled some out, and the independent verification), and CI checks the fix.
+
+**Try it in your browser.**
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/waleedmustafa971/forge-0-hackathon)
+The codespace assembles and installs FORGE-0 (about 5 minutes the first time), then opens the
+dashboard on port 8010. Without a key, FORGE-0 runs on its clearly labelled mock provider (scripted
+model replies for D1–D5), while the sandbox, experiments and verification are real. Choose
+*Start investigation* → *Scan tests* → "charges the customer exactly once when a timed-out request
+is retried" to watch FORGE-0 reject a patch that breaks another test, then verify a revised one. To
+run on Muse Spark 1.3, save a Meta Model API key as a Codespaces secret named `META_API_KEY`. The
+*Evaluation* page shows every real-model benchmark run.
+
+## Run it locally
 
 Requirements: Python 3.12+, Git, Node.js 22.18+, and Docker.
 
