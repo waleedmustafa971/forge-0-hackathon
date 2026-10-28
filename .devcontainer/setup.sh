@@ -18,7 +18,11 @@ backend/.venv/bin/pip install -q -e ./backend
 (cd frontend && npm ci --no-audit --no-fund && npm run build)
 
 for _ in $(seq 1 60); do timeout 5 docker info > /dev/null 2>&1 && break; sleep 2; done
-timeout 5 docker info > /dev/null 2>&1 || { echo "The Docker daemon did not start" >&2; exit 1; }
+if ! timeout 5 docker info > /dev/null 2>&1; then
+  echo "The Docker daemon did not start. Its log (from the docker-in-docker feature):" >&2
+  tail -n 40 /tmp/dockerd.log >&2 2> /dev/null || true
+  exit 1
+fi
 docker pull -q node:24-alpine
 docker build -q -t forge0/sandbox-python:3.12 backend/sandbox/images/python
 echo "FORGE-0 is installed in ./forge-0"
