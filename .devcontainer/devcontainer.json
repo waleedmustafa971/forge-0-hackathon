@@ -6,15 +6,17 @@
   "image": "mcr.microsoft.com/devcontainers/python:1-3.12-bookworm",
   "features": {
     "ghcr.io/devcontainers/features/node:1": { "version": "24" },
-    // A daemon inside the codespace, so sandbox bind mounts see the same paths as FORGE-0.
+    // A Docker daemon inside the codespace, for FORGE-0's experiment sandbox.
     "ghcr.io/devcontainers/features/docker-in-docker:2": {}
   },
   "hostRequirements": { "cpus": 2, "memory": "8gb" },
   "postCreateCommand": "bash .devcontainer/setup.sh",
   "postStartCommand": "bash .devcontainer/start.sh",
+  // Keep the creation log on screen until FORGE-0 answers, so nobody opens a half-installed copy.
+  "waitFor": "postStartCommand",
   "forwardPorts": [8010],
   "portsAttributes": {
-    "8010": { "label": "FORGE-0 dashboard", "onAutoForward": "openPreview" }
+    "8010": { "label": "FORGE-0 dashboard", "onAutoForward": "openBrowser" }
   },
   "secrets": {
     "META_API_KEY": {

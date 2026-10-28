@@ -98,3 +98,13 @@ returned, FORGE-0 fixed 30. The hypothesis that the structure helps a weaker cod
 (A: 9 vs 9; B: 30 vs 38). In arm B it made no false claims where the loop made one. Fixing the
 experiment-design failure on open models is a change to FORGE-0, so its effect has to be measured
 as a new run on all defects, not merged into these numbers.
+
+## How to check that this was written first (added 2026-10-28)
+
+The commit history mentioned at the top is in the private development repository; the public
+submission repository has only a single commit, so it cannot show the order by itself. The record:
+this file was committed as `3c554f4` at 2026-10-27 11:04 UTC. Both arms were started about 20
+minutes later: their run logs were created at 11:24:56 UTC (arm A) and 11:25:44 UTC (arm B). The
+results record `created_at` when each run finished: 11:54 UTC for arm A (`20261027-115421-meta`)
+and 13:25 UTC for arm B (`20261027-132544-openai`). The development repository's history and the
+run logs are available to the organizers on request.

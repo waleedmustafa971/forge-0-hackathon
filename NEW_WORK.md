@@ -3,7 +3,9 @@
 The pre-hackathon core is commit `0d3dde1` of the development repository (Oct 19, 2026), published
 unchanged as [forge-0-core](https://github.com/waleedmustafa971/forge-0-core) (tag
 `pre-hackathon-2026-10-19`). Nothing was written between that commit and the hackathon kickoff on
-Oct 26, 2026. Everything below was written after kickoff.
+Oct 26, 2026. Everything below was written after kickoff, except the vendored third-party
+library noted below, which was added after kickoff. This repository's own files (`README.md`, this
+file, `assemble.py`, `.devcontainer/`, `.github/`) were written for it during the event.
 
 This file is generated from `git diff 0d3dde1 HEAD` of the development repository.
 
@@ -39,7 +41,7 @@ Its tests and code aren't FORGE-0 work.
 | `benchmarks/hidden-tests/D8-stateful-regex.test.ts` | 29 |
 | `benchmarks/hidden-tests/D9-order-dependent-cache.test.ts` | 26 |
 | `benchmarks/hidden-tests/test_R1_parse_microseconds.py` | 20 |
-| `benchmarks/preregistration/2026-10-27-harder-defects.md` | 100 |
+| `benchmarks/preregistration/2026-10-27-harder-defects.md` | 110 |
 | `benchmarks/results/20261027-072844-meta.html` | 35 |
 | `benchmarks/results/20261027-072844-meta.json` | 1414 |
 | `benchmarks/results/20261027-101729-meta.html` | 35 |
@@ -101,8 +103,8 @@ Its tests and code aren't FORGE-0 work.
 | `demo/real-world/parse/tests/test_pattern.py` | 96 |
 | `demo/real-world/parse/tests/test_result.py` | 38 |
 | `demo/real-world/parse/tests/test_search.py` | 24 |
-| `integrations/github/README.md` | 68 |
-| `integrations/github/forge0.yml` | 130 |
+| `integrations/github/README.md` | 63 |
+| `integrations/github/forge0.yml` | 133 |
 
 ## 53 pre-existing files changed during the hackathon (in `patches/`)
 
@@ -114,7 +116,7 @@ Line ranges refer to the file after the change. Every other line in these files 
 | `.github/workflows/ci.yml` | +10 / -2 | 38-40, 113-116, 122-124 |
 | `.gitignore` | +1 / -0 | 13 |
 | `CONTRIBUTING.md` | +1 / -1 | 24 |
-| `README.md` | +106 / -32 | 9-14, 16-18, 48-54, 60-86, 131, 139-169, 173-174, 177, 179-182, 184-187, 197-202, 217, 219-224, 229-230, 244-245, 252, 254-255 |
+| `README.md` | +108 / -33 | 9-14, 16-18, 48-54, 60-86, 93-94, 132, 140-170, 174-175, 178, 180-183, 185-188, 198-203, 218, 220-225, 230-231, 245-246, 253, 255-256 |
 | `backend/agents/belief.py` | +22 / -5 | 12-14, 89-91, 94-104, 128-131, 139 |
 | `backend/agents/executor.py` | +24 / -2 | 21-23, 34-43, 61-69, 81-82 |
 | `backend/agents/investigator.py` | +73 / -12 | 4-6, 17, 26-28, 68-107, 205-222, 226-233 |
@@ -153,8 +155,8 @@ Line ranges refer to the file after the change. Every other line in these files 
 | `docs/ARCHITECTURE.md` | +48 / -6 | 77, 82, 97-100, 118-138, 165, 173-179, 193-200, 205-206, 208, 210-211 |
 | `docs/DEMO.md` | +10 / -3 | 25, 45, 84-91 |
 | `docs/EVALUATION.md` | +150 / -64 | 1, 5-8, 12-18, 20-22, 26-27, 36-46, 53-54, 60-61, 66-167, 176-177, 183, 187-190, 193, 197-202, 204-205 |
-| `docs/HACKATHON_SUBMISSION.md` | +81 / -65 | 8-10, 15-18, 22-87, 91-97, 101 |
-| `docs/STATUS.md` | +47 / -66 | 3-6, 12-18, 20-21, 24, 28-32, 36-51, 53-56, 58-60, 62-65, 69 |
+| `docs/HACKATHON_SUBMISSION.md` | +89 / -65 | 8-10, 15-18, 22-91, 95-103, 107-109 |
+| `docs/STATUS.md` | +49 / -66 | 3-8, 14-20, 22-23, 26, 30-34, 38-53, 55-58, 60-62, 64-67, 71 |
 | `frontend/src/api/client.ts` | +1 / -1 | 76 |
 | `frontend/src/api/types.ts` | +2 / -2 | 79, 173 |
 | `frontend/src/components/StartInvestigation.tsx` | +10 / -2 | 23, 120, 137-144 |

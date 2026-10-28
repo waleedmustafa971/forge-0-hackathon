@@ -11,27 +11,22 @@ issue `forge0`, FORGE-0 investigates in its sandbox and either
 
 A human always reviews and merges. Added during the Meta hackathon (2026-10-27).
 
-**Verified on GitHub Actions (2026-10-27):** issue
-[#1](https://github.com/waleedmustafa971/forge-0/issues/1) in this repository, labelled `forge0`,
-triggered [`forge0-selftest.yml`](../../.github/workflows/forge0-selftest.yml) (the same steps,
-pointed at `demo/order-management`). FORGE-0 reproduced the D6 refund defect, ran four experiments
-that refuted two of its three explanations, and opened
-[PR #2](https://github.com/waleedmustafa971/forge-0/pull/2) as `forge0[bot]` with a verified fix
-for both causes, the evidence as its description and `Closes #1`. About $0.07 of Muse Spark 1.3.
-The PR was closed unmerged because the defect is a benchmark fixture.
-
-A later run (issue #8 → PR #9, D5) also exercised the CI hand-off: the workflow dispatched CI on
-the fix branch, and its checks passed on the PR's commit (the demo contract: exactly one defect
-fixed, 32 passing / 11 failing, no regressions). Not every run ends in a PR: on issue #5 FORGE-0
-ended D6 inconclusive and commented its evidence on the issue instead.
+**Verified on GitHub Actions (2026-10-28), in public:** in
+[forge-0-demo](https://github.com/waleedmustafa971/forge-0-demo), which runs this workflow, issues
+#1–#3 labelled `forge0` led to verified-fix pull requests
+[#4](https://github.com/waleedmustafa971/forge-0-demo/pull/4),
+[#5](https://github.com/waleedmustafa971/forge-0-demo/pull/5) and
+[#6](https://github.com/waleedmustafa971/forge-0-demo/pull/6) by `forge0[bot]` on Muse Spark 1.3,
+each with the evidence as its description and CI dispatched on the fix branch. Earlier test runs on
+2026-10-27 in the private development repository also produced PRs (D6, D5), and one ended D6
+inconclusive and commented its evidence on the issue instead.
 
 ## Setup
 
 1. Copy [`forge0.yml`](forge0.yml) to `.github/workflows/forge0.yml` in the repository to protect.
 2. Set `workflows: ["CI"]` (and `CI_WORKFLOW`) to the name of the workflow whose failures should
    trigger FORGE-0, and give that workflow a `workflow_dispatch:` trigger.
-3. Add the repository secret `META_API_KEY` (Meta Model API). If your copy of FORGE-0 is a private
-   repository, also add a read-only deploy key for it as `FORGE0_DEPLOY_KEY`. Optionally add
+3. Add the repository secret `META_API_KEY` (Meta Model API). Optionally add
    `OPENAI_COMPAT_API_KEY` (e.g. a Baseten key) and set `AI_SECONDARY_PROVIDER: openai` to run
    experiment design and repairs on Muse Spark Open while Muse Spark 1.3 forms the hypotheses.
 4. Allow Actions to create pull requests: *Settings → Actions → General → Workflow permissions →

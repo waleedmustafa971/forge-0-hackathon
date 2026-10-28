@@ -1,5 +1,5 @@
 diff --git a/README.md b/README.md
-index c953a9f..c482579 100644
+index c953a9f..11902cb 100644
 --- a/README.md
 +++ b/README.md
 @@ -6,11 +6,16 @@ counterfactual interventions) that discriminate between them, runs those experim
@@ -23,7 +23,7 @@ index c953a9f..c482579 100644
  > FORGE-0 runs on a clearly labelled **mock provider** with scripted outputs, while every execution
  > and verification is still real.
  
-@@ -40,16 +45,45 @@ flowchart LR
+@@ -40,23 +45,53 @@ flowchart LR
  | React dashboard (dashboard, explorer, workspace, timeline, patch review, report, evaluation, settings) | ✅ implemented, verified in a browser |
  | Mock provider (scripted, labelled *simulated*) | ✅ implemented |
  | OpenAI-compatible provider | ✅ implemented, tested with a mock HTTP transport |
@@ -35,7 +35,7 @@ index c953a9f..c482579 100644
 +| Demo service with 12 planted defects + 1 real open-source bug, reference fixes, hidden tests | ✅ every reference fix, hidden test and trap checked in the sandbox *(D6–D12, R1 new)* |
 +| Evaluation harness: one-shot vs edit-test loop vs FORGE-0, hidden-test scoring, spend guard | ✅ real-model results *(edit-test loop, spend guard new)* |
 +| Flaky-test triage (deterministic / intermittent / order-dependent) | ✅ implemented, tested, live *(new)* |
-+| GitHub integration: verified fix → pull request with the evidence; otherwise an issue comment | ✅ **live on GitHub Actions**: issue #1 → [PR #2](https://github.com/waleedmustafa971/forge-0/pull/2) *(new)* |
++| GitHub integration: verified fix → pull request with the evidence; otherwise an issue comment | ✅ **live on GitHub Actions**: three issues → PRs [#4](https://github.com/waleedmustafa971/forge-0-demo/pull/4), [#5](https://github.com/waleedmustafa971/forge-0-demo/pull/5), [#6](https://github.com/waleedmustafa971/forge-0-demo/pull/6) in [forge-0-demo](https://github.com/waleedmustafa971/forge-0-demo) *(new)* |
 +| Python repositories (pytest runner, JUnit parsing) | ✅ live on R1 *(new; was experimental)* |
  | CI (lint, typecheck, tests, builds, integration, gitleaks, dependency audit) | ✅ configured |
  | Docker Compose full stack (`--profile app`) | ✅ built and exercised end to end, see [Docker](#docker-compose) |
@@ -74,7 +74,16 @@ index c953a9f..c482579 100644
  ## Quick start (Windows)
  
  Requirements: Python 3.12+, Node.js 22.18+ (24 recommended), Git, and Docker Desktop **or** Docker
-@@ -94,7 +128,7 @@ npm run dev                                   # proxies /api to 127.0.0.1:8010
+ Engine inside WSL2.
+ 
+ ```powershell
+-git clone https://github.com/waleedmustafa971/forge-0.git; cd forge-0
++git clone https://github.com/waleedmustafa971/forge-0-hackathon.git; cd forge-0-hackathon
++python assemble.py; cd forge-0    # pre-hackathon core + hackathon work, see forge-0-hackathon
+ .\scripts\lite.ps1 start      # lightweight: one backend process serving API + dashboard on :8010
+ .\scripts\lite.ps1 stop       # stop everything
+ ```
+@@ -94,7 +129,7 @@ npm run dev                                   # proxies /api to 127.0.0.1:8010
  
  ## Demonstration
  
@@ -83,7 +92,7 @@ index c953a9f..c482579 100644
  then **New investigation** on any failing test. Watch hypotheses get refuted live, inspect the
  counterfactual experiment, review the verified diff, and download the evidence report. The
  double-charge defect shows the verifier rejecting a regression-causing patch and the repair being
-@@ -102,23 +136,55 @@ revised.
+@@ -102,23 +137,55 @@ revised.
  
  ## Evaluation
  
@@ -149,7 +158,7 @@ index c953a9f..c482579 100644
  
  ## Activating the Meta Model API
  
-@@ -128,6 +194,12 @@ capability.
+@@ -128,6 +195,12 @@ capability.
  4. `backend\.venv\Scripts\python scripts\check_meta.py --structured`
  5. Start an investigation; the header shows `meta · muse-spark-1.3` instead of `MOCK · scripted`.
  
@@ -162,7 +171,7 @@ index c953a9f..c482579 100644
  Details, the verified request contract and fallbacks: [docs/API_INTEGRATION.md](docs/API_INTEGRATION.md).
  
  ## Docker Compose
-@@ -142,20 +214,20 @@ sandboxes. Read [docs/SECURITY.md](docs/SECURITY.md) before using it.
+@@ -142,20 +215,20 @@ sandboxes. Read [docs/SECURITY.md](docs/SECURITY.md) before using it.
  
  ## Tests
  
@@ -192,7 +201,7 @@ index c953a9f..c482579 100644
  `AI_TEMPERATURE`, `DATABASE_URL`, `SANDBOX_DOCKER_COMMAND` (`auto` finds `docker` or `wsl -- docker`),
  `SANDBOX_MEMORY`/`SANDBOX_CPUS`/`SANDBOX_TIMEOUT_S`, and the budgets `MAX_EXPERIMENTS`,
  `MAX_MODEL_CALLS`, `MAX_REPAIR_ATTEMPTS`, `INVESTIGATION_TIME_BUDGET_S`. Provider and budget choices
-@@ -169,16 +241,18 @@ can also be changed at runtime in **Settings**. API keys can't: they never leave
+@@ -169,16 +242,18 @@ can also be changed at runtime in **Settings**. API keys can't: they never leave
  * [API integration](docs/API_INTEGRATION.md): Meta Model API contract and activation
  * [Security](docs/SECURITY.md): sandbox controls, threat model, limitations
  * [Evaluation](docs/EVALUATION.md): methodology and results

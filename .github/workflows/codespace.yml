@@ -1,0 +1,24 @@
+# Builds the same dev container a Codespace uses (including its setup.sh and start.sh), then runs
+# .devcontainer/smoke.sh in it: the dashboard must be served and one mock investigation must end
+# in a verified fix, with real sandbox runs. Proves the "Open in GitHub Codespaces" button works.
+name: Codespace smoke test
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the dev container, run its setup, then the smoke test
+        uses: devcontainers/ci@v0.3
+        with:
+          push: never
+          runCmd: bash .devcontainer/smoke.sh

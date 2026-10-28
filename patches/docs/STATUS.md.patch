@@ -1,8 +1,8 @@
 diff --git a/docs/STATUS.md b/docs/STATUS.md
-index 9169a3b..c81a4fc 100644
+index 9169a3b..407e7b0 100644
 --- a/docs/STATUS.md
 +++ b/docs/STATUS.md
-@@ -1,92 +1,73 @@
+@@ -1,92 +1,75 @@
  # Project status and handoff
  
 -**As of 2026-10-19.** FORGE-0 is feature-complete in mock mode and **waiting for Meta Model API
@@ -11,8 +11,10 @@ index 9169a3b..c81a4fc 100644
 -green.
 +**As of 2026-10-27.** FORGE-0 runs on Meta Muse Spark 1.3 (Meta Model API), with the open-weights
 +Muse Spark Open (Baseten) as an optional second model. The real-model benchmark is complete. The
-+code is on `main` in <https://github.com/waleedmustafa971/forge-0> (private until submission; the
-+hackathon requires it to be public by then).
++development repository is private; the public submission is
++<https://github.com/waleedmustafa971/forge-0-hackathon> (hackathon work only, assembled onto the
++labelled pre-hackathon core <https://github.com/waleedmustafa971/forge-0-core>), with live runs in
++<https://github.com/waleedmustafa971/forge-0-demo>.
  
  ## What works (verified)
  

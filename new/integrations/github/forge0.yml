@@ -7,8 +7,9 @@
 #     "Failing test: <test name>" in the issue body (else the first failing test is used).
 #
 # Requires: repository secret META_API_KEY (Meta Model API). Optional: OPENAI_COMPAT_API_KEY for
-# routing experiment design and repairs to Muse Spark Open on Baseten (see AI_SECONDARY_* below),
-# and FORGE0_DEPLOY_KEY (a read-only deploy key) if your FORGE-0 checkout is a private repository.
+# routing experiment design and repairs to Muse Spark Open on Baseten (see AI_SECONDARY_* below).
+# CI failures are investigated only for branches of this repository, never for pull requests from
+# forks, so nobody outside the repository can start a run that spends its secrets.
 # Limits: the sandbox is offline and does not install dependencies, so the project's tests must
 # run with Node's built-in runner (node --test) or with pytest and the standard library only.
 name: FORGE-0
@@ -35,12 +36,14 @@ jobs:
     if: >-
       (github.event_name == 'workflow_run'
         && github.event.workflow_run.conclusion == 'failure'
+        && github.event.workflow_run.head_repository.full_name == github.repository
         && !startsWith(github.event.workflow_run.head_branch, 'forge0/'))
       || (github.event_name == 'issues' && github.event.label.name == 'forge0')
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      FORGE0_REPOSITORY: waleedmustafa971/forge-0
+      # The public hackathon repository; assemble.py adds it to the pre-hackathon core.
+      FORGE0_REPOSITORY: waleedmustafa971/forge-0-hackathon
       FORGE0_REF: main
       # Same workflow as `workflows:` above (name or file); it needs a `workflow_dispatch:` trigger.
       # It is dispatched on FORGE-0's fix branch so the PR gets checks. Empty: skip.
@@ -60,8 +63,7 @@ jobs:
         with:
           repository: ${{ env.FORGE0_REPOSITORY }}
           ref: ${{ env.FORGE0_REF }}
-          path: forge0
-          ssh-key: ${{ secrets.FORGE0_DEPLOY_KEY }}  # empty for a public FORGE-0: the token is used
+          path: forge0-hackathon
           persist-credentials: false
 
       - uses: actions/setup-python@v5
@@ -70,6 +72,7 @@ jobs:
 
       - name: Install FORGE-0 and its sandbox images
         run: |
+          python forge0-hackathon/assemble.py --out forge0
           pip install ./forge0/backend
           docker pull node:24-alpine
           docker build -t forge0/sandbox-python:3.12 forge0/backend/sandbox/images/python

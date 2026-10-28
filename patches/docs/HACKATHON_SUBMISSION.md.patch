@@ -1,8 +1,8 @@
 diff --git a/docs/HACKATHON_SUBMISSION.md b/docs/HACKATHON_SUBMISSION.md
-index c5a1f09..27ea900 100644
+index c5a1f09..a113834 100644
 --- a/docs/HACKATHON_SUBMISSION.md
 +++ b/docs/HACKATHON_SUBMISSION.md
-@@ -5,82 +5,98 @@
+@@ -5,82 +5,106 @@
  ## One-liner
  
  FORGE-0 is an autonomous debugger that refuses to guess: it proposes competing root-cause
@@ -88,7 +88,11 @@ index c5a1f09..27ea900 100644
 +
 +## Prior work vs. hackathon work
 +
-+The hackathon allows building on an existing project if only the new work is showcased.
++The organizers' rule for existing projects: the submitted repository is a fresh public repository
++with only the work done during the event, the existing codebase kept out of it, and the video opens
++with one line stating what was pre-existing and what was built this week. So the submission is
++[forge-0-hackathon](https://github.com/waleedmustafa971/forge-0-hackathon); the pre-hackathon code is
++the separate, labelled [forge-0-core](https://github.com/waleedmustafa971/forge-0-core).
 +
 +**Before the hackathon** (commits up to `0d3dde1`, 2026-10-19): the seven-agent pipeline, the
 +hardened Docker sandbox, the verifier, the dashboard, the mock provider, a Meta provider written to
@@ -153,16 +157,20 @@ index c5a1f09..27ea900 100644
 -| 1:50–2:15 | Payment investigation, rejected P1 | "Here's why verification matters. On the double-charge bug, the first patch fixes the failing test but breaks separate captures for the same order. The verifier rejects it and feeds that back, and the second patch is accepted." |
 -| 2:15–2:35 | Evaluation page | "Against a one-shot baseline, FORGE-0 never claims a fix it can't prove. These numbers come from our scripted mock run, clearly labelled; with a Muse Spark key, the same harness measures the real thing." |
 -| 2:35–2:45 | Settings → Meta Model API | "Muse Spark plugs in with one environment variable. FORGE-0: scientific debugging, with receipts." |
-+| 0:00–0:15 | GitHub issue labelled `forge0` | "A refund bug is reported. Instead of a developer, FORGE-0 picks it up." |
-+| 0:15–0:45 | Workflow run → investigation workspace | "Muse Spark 1.3 proposes competing explanations. The open-weights Muse Spark Open designs experiments to tell them apart. They run in an offline sandbox." |
-+| 0:45–1:20 | Experiment timeline, confidence bars | "This bug has two causes. The experiments separate them: the refund amount is wrong *and* the restock races on duplicate items." |
-+| 1:20–1:50 | Pull request opened by `forge0[bot]` | "Only a verified fix becomes a pull request, and its description is the evidence: what was ruled out, how, and the verification." |
-+| 1:50–2:15 | Order-dependent test (D9) | "Flaky tests get triaged first: this one passes alone and fails after its neighbours, so FORGE-0 hunts for leaked state." |
-+| 2:15–2:35 | Real bug R1 in `parse` | "It also fixes real bugs: this is a shipped bug from an open-source Python library, fixed and verified against the project's own regression test." |
-+| 2:35–3:00 | Evaluation page | "On 30 runs, a one-shot fix shipped two broken patches. FORGE-0 shipped none, and every fix came with its evidence." |
++| 0:00–0:10 | Title card: before / this week | "FORGE-0's debugging core and dashboard existed before the hackathon. This week I ran it on Meta's Muse Spark for the first time and built GitHub pull requests, flaky-test triage, harder benchmarks and a fair baseline." |
++| 0:10–0:25 | [forge-0-demo issue #1](https://github.com/waleedmustafa971/forge-0-demo/issues/1), labelled `forge0` | "A bug report: quotes still show the old price. I label the issue, and FORGE-0 picks it up in GitHub Actions." |
++| 0:25–0:55 | [PR #4](https://github.com/waleedmustafa971/forge-0-demo/pull/4): explanations and experiments | "Muse Spark 1.3 proposes three explanations. FORGE-0 designs experiments to tell them apart and runs them in an offline sandbox: two are refuted, one is confirmed." |
++| 0:55–1:25 | PR #4: diff and independent verification | "The fix invalidates the cached price when a price changes. The easy fix, bypassing the cache, breaks a rate-limit test in another file, and the verifier runs the whole suite. Only a verified fix becomes a pull request, and its description is the evidence." |
++| 1:25–1:40 | CI check on the PR | "CI on the fix branch checks it again: the target test now passes and every test that passed before still passes." |
++| 1:40–2:00 | Order-dependent test (D9) | "Flaky tests get triaged first: this one passes alone and fails after its neighbours, so FORGE-0 looks for leaked state." |
++| 2:00–2:20 | Real bug R1 in `parse` | "It also fixes real bugs: a shipped bug from an open-source Python library, verified against the project's own regression test." |
++| 2:20–2:45 | Evaluation page | "On 30 runs on Muse Spark 1.3, a one-shot fix shipped two broken patches; FORGE-0 shipped none. A second setup routes experiment design to the open-weights Muse Spark Open. FORGE-0 doesn't fix more bugs than an edit-and-retest loop; what it adds is the proof behind every fix it claims." |
++| 2:45–3:00 | forge-0-hackathon README: Codespaces button | "It's all public: open it in a Codespace and watch it work." |
  
  ## Links
  
 -* Repository: private GitHub repository `forge-0` (shared with judges on request)
-+* Repository: <https://github.com/waleedmustafa971/forge-0> (public at submission)
++* Submission repository: <https://github.com/waleedmustafa971/forge-0-hackathon>
++* Live runs on GitHub: <https://github.com/waleedmustafa971/forge-0-demo>
++* Pre-hackathon core (labelled, not part of the submission): <https://github.com/waleedmustafa971/forge-0-core>
  * Architecture: `docs/ARCHITECTURE.md` · Security: `docs/SECURITY.md` · Evaluation: `docs/EVALUATION.md`

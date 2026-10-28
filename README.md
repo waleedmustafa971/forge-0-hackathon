@@ -17,7 +17,9 @@ This repository holds **only the work done during the Meta Global AI Developer H
 
 [NEW_WORK.md](NEW_WORK.md) lists every new file, and for every pre-existing file the exact line
 ranges changed during the hackathon. The core is a dependency here, the same way a library would be:
-none of its code is copied into this repository.
+no pre-existing file is copied into this repository. (Like any diff, the patches carry a few lines of
+surrounding pre-existing code as context, and the lines they remove.) This repository's own files,
+`assemble.py`, `.devcontainer/` and its workflow, were also written during the event.
 
 ## Built during the hackathon
 
@@ -35,7 +37,8 @@ none of its code is copied into this repository.
    **pytest** runner real.
 5. **Flaky-test triage.** Re-runs classify each failure as deterministic, intermittent or
    order-dependent before any hypothesis is formed. The verifier adapts its re-runs to the class.
-6. **GitHub integration.** On a CI failure or a `forge0`-labelled issue, a GitHub Action runs
+6. **GitHub integration.** On a CI failure in one of the repository's own branches, or on a
+   `forge0`-labelled issue, a GitHub Action runs
    FORGE-0 and opens a pull request whose description is the evidence. When no fix survives
    verification, it posts the evidence as an issue comment instead.
 7. **Two Meta models in two roles.** Muse Spark 1.3 forms the hypotheses; the open-weights Muse
@@ -61,12 +64,16 @@ Full results, including the losses, are in `docs/EVALUATION.md` and
 **Real Muse Spark runs on GitHub.** In [forge-0-demo](https://github.com/waleedmustafa971/forge-0-demo),
 labelling an issue `forge0` starts FORGE-0 in GitHub Actions on Muse Spark 1.3. Its issues and pull
 requests show the results: the PR description is the evidence (the explanations FORGE-0 considered,
-the experiments that ruled some out, and the independent verification), and CI checks the fix.
+the experiments that ruled some out, and the independent verification), and CI checks the fix by
+test name: the target test now passes, and every test that passed before still passes.
 
 **Try it in your browser.**
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/waleedmustafa971/forge-0-hackathon)
-The codespace assembles and installs FORGE-0 (about 5 minutes the first time), then opens the
-dashboard on port 8010. Without a key, FORGE-0 runs on its clearly labelled mock provider (scripted
+The codespace assembles and installs FORGE-0. The first start takes several minutes, and its
+creation log stays on screen until FORGE-0 answers; then the dashboard opens on port 8010 (if your
+browser blocks the new tab, open it from the *Ports* panel).
+[![Codespace smoke test](https://github.com/waleedmustafa971/forge-0-hackathon/actions/workflows/codespace.yml/badge.svg)](https://github.com/waleedmustafa971/forge-0-hackathon/actions/workflows/codespace.yml)
+checks this on every change: it builds the same dev container and runs the investigation below. Without a key, FORGE-0 runs on its clearly labelled mock provider (scripted
 model replies for D1–D5), while the sandbox, experiments and verification are real. Choose
 *Start investigation* → *Scan tests* → "charges the customer exactly once when a timed-out request
 is retried" to watch FORGE-0 reject a patch that breaks another test, then verify a revised one. To
@@ -80,13 +87,18 @@ Requirements: Python 3.12+, Git, Node.js 22.18+, and Docker.
 ```bash
 git clone https://github.com/waleedmustafa971/forge-0-hackathon.git
 cd forge-0-hackathon
-python assemble.py          # clones the core, applies this repo's work, writes ./forge-0
+python assemble.py     # clones the core, applies this repository's work, verifies it, writes ./forge-0
+cd forge-0
+./scripts/dev.sh       # Linux/macOS: API on :8010, dashboard on :5173
+.\scripts\lite.ps1 start   # Windows instead: API and dashboard on http://127.0.0.1:8010
 ```
 
 `assemble.py` checks out the pre-hackathon core, applies the patches, adds the new files, and checks
-that the result matches, byte for byte, the version that was benchmarked. Then follow
-`forge-0/README.md` (Quick start). Without a Meta API key, FORGE-0 runs on a clearly labelled mock
-provider; with `META_API_KEY` in `.env`, it runs on Muse Spark 1.3.
+that the result is byte for byte the development repository's current version. FORGE-0's code in it
+(`backend/`, `frontend/`, `demo/`, `scripts/`) is identical to the commit the benchmarks ran on; only
+documentation and the GitHub workflow template changed afterwards. FORGE-0 runs on its clearly
+labelled mock provider unless you set `AI_PROVIDER=meta` and `META_API_KEY` in `forge-0/.env` (or
+choose the provider in *Settings*), which runs it on Muse Spark 1.3.
 
 ## License
 
