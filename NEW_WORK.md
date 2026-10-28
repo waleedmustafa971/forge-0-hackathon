@@ -9,7 +9,7 @@ file, `assemble.py`, `.devcontainer/`, `.github/`) were written for it during th
 
 This file is generated from `git diff 0d3dde1 HEAD` of the development repository.
 
-## 88 files created during the hackathon (in `new/`)
+## 90 files created during the hackathon (in `new/`)
 
 `new/demo/real-world/parse/` is third-party code: the open-source
 [`parse`](https://github.com/r1chardj0n3s/parse) library (MIT), vendored as a test subject (R1).
@@ -103,6 +103,8 @@ Its tests and code aren't FORGE-0 work.
 | `demo/real-world/parse/tests/test_pattern.py` | 96 |
 | `demo/real-world/parse/tests/test_result.py` | 38 |
 | `demo/real-world/parse/tests/test_search.py` | 24 |
+| `frontend/src/reproduction.test.ts` | 24 |
+| `frontend/src/reproduction.ts` | 22 |
 | `integrations/github/README.md` | 63 |
 | `integrations/github/forge0.yml` | 133 |
 
@@ -120,7 +122,7 @@ Line ranges refer to the file after the change. Every other line in these files 
 | `backend/agents/belief.py` | +22 / -5 | 12-14, 89-91, 94-104, 128-131, 139 |
 | `backend/agents/executor.py` | +24 / -2 | 21-23, 34-43, 61-69, 81-82 |
 | `backend/agents/investigator.py` | +73 / -12 | 4-6, 17, 26-28, 68-107, 205-222, 226-233 |
-| `backend/agents/orchestrator.py` | +66 / -9 | 50-56, 119, 163, 168-170, 178-181, 312, 321, 347, 560-604, 665-666 |
+| `backend/agents/orchestrator.py` | +77 / -10 | 15, 51-57, 62-70, 129, 173, 178-180, 188-191, 322, 331, 357, 502, 570-614, 675-676 |
 | `backend/agents/prompts.py` | +33 / -4 | 30-35, 39-44, 70-72, 178-195 |
 | `backend/agents/repair.py` | +19 / -1 | 8, 56-73 |
 | `backend/agents/verifier.py` | +10 / -5 | 5-6, 19-20, 138-141, 143, 145 |
@@ -145,7 +147,7 @@ Line ranges refer to the file after the change. Every other line in these files 
 | `backend/tests/test_benchmark_config.py` | +8 / -5 | 27, 50-55, 57 |
 | `backend/tests/test_integration_docker.py` | +7 / -4 | 19-21, 55-56, 86, 98 |
 | `backend/tests/test_meta_contract.py` | +22 / -7 | 196-197, 200, 203-221 |
-| `backend/tests/test_orchestrator.py` | +31 / -0 | 140-170 |
+| `backend/tests/test_orchestrator.py` | +46 / -1 | 5, 140-184 |
 | `benchmarks/configs/muse-spark-1.3.json` | +4 / -3 | 3, 10, 14-15 |
 | `benchmarks/run_benchmark.py` | +82 / -27 | 50, 54-58, 61-64, 73-74, 105-109, 130, 157-159, 163-164, 175-177, 191-192, 206-207, 269-270, 272-275, 280-281, 285, 293-299, 316, 334-337, 339-340, 342-343, 354-355, 361, 384, 390-393, 417, 444-449, 509-510, 541-544, 549-554 |
 | `demo/defects/README.md` | +33 / -2 | 14-44, 50, 54 |
@@ -158,10 +160,10 @@ Line ranges refer to the file after the change. Every other line in these files 
 | `docs/HACKATHON_SUBMISSION.md` | +89 / -65 | 8-10, 15-18, 22-91, 95-103, 107-109 |
 | `docs/STATUS.md` | +49 / -66 | 3-8, 14-20, 22-23, 26, 30-34, 38-53, 55-58, 60-62, 64-67, 71 |
 | `frontend/src/api/client.ts` | +1 / -1 | 76 |
-| `frontend/src/api/types.ts` | +2 / -2 | 79, 173 |
+| `frontend/src/api/types.ts` | +10 / -2 | 79, 108-114, 124, 181 |
 | `frontend/src/components/StartInvestigation.tsx` | +10 / -2 | 23, 120, 137-144 |
 | `frontend/src/pages/Benchmarks.test.tsx` | +29 / -3 | 1, 9-10, 13-16, 37-58 |
 | `frontend/src/pages/Benchmarks.tsx` | +30 / -17 | 7-8, 50-52, 57, 61-64, 69, 94-96, 103-106, 143-146, 151-154, 176, 178, 180, 182 |
 | `frontend/src/pages/investigation/Report.tsx` | +7 / -3 | 54, 112-117 |
 | `frontend/src/pages/investigation/Timeline.tsx` | +3 / -1 | 48, 50-51 |
-| `frontend/src/pages/investigation/Workspace.tsx` | +1 / -1 | 61 |
+| `frontend/src/pages/investigation/Workspace.tsx` | +4 / -6 | 6, 12, 36, 59 |

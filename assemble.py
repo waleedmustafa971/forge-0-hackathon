@@ -18,7 +18,7 @@ from pathlib import Path
 
 CORE_URL = "https://github.com/waleedmustafa971/forge-0-core.git"
 CORE_TREE = "2b92b06020c31a745a6a63678b335eaf0651bf94"  # git tree of the pre-hackathon core (Oct 19, 2026)
-RESULT_TREE = "976de4fbbafcf7b161f3369b24c3a483bef0d8ae"  # git tree of core + hackathon work
+RESULT_TREE = "7a6b1fdebebf5415d2ac9a61a2bb9c76d2abb7b9"  # git tree of core + hackathon work
 HERE = Path(__file__).resolve().parent
 # A fixed identity, no signing and no hooks, so the judge's git configuration cannot get in the way.
 COMMIT_CONFIG = [

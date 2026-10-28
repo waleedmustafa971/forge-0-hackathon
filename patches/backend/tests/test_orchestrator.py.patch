@@ -1,8 +1,17 @@
 diff --git a/backend/tests/test_orchestrator.py b/backend/tests/test_orchestrator.py
-index 55a3bb4..340cb85 100644
+index 55a3bb4..6baef92 100644
 --- a/backend/tests/test_orchestrator.py
 +++ b/backend/tests/test_orchestrator.py
-@@ -137,3 +137,34 @@ def test_unknown_target_reports_no_failure(investigation):
+@@ -2,7 +2,7 @@
+ 
+ import pytest
+ 
+-from agents.orchestrator import Orchestrator
++from agents.orchestrator import Orchestrator, _hypothesis_key
+ from core.database import session_scope
+ from core.models import Event, Experiment, Hypothesis, Investigation, ModelCall, Patch, Repository
+ from services.repo_analysis import profile_repository
+@@ -137,3 +137,48 @@ def test_unknown_target_reports_no_failure(investigation):
      Orchestrator(inv_id, sandbox=FakeSandbox()).run()
      inv = load(inv_id)["inv"]
      assert inv.verdict == "no_failure_observed"
@@ -37,3 +46,17 @@ index 55a3bb4..340cb85 100644
 +    assert e0.spec["test_name_pattern"] is None
 +    assert e0.evaluation["flakiness"]["classification"] == "order_dependent"
 +    assert e0.evaluation["flakiness"]["isolated_runs"] == ["passed"] * 3
++
++
++@pytest.mark.parametrize(
++    ("addressed", "key"),
++    [
++        ("H1", "H1"),
++        ("H2: Float-based fractional-second conversion in date_convert loses precision", "H2"),
++        ("  H12 (leading)", "H12"),
++        ("the cache is never invalidated, so stale prices are served", "the cache is nev"),
++        (None, None),
++    ],
++)
++def test_patch_hypothesis_key_fits_its_column(addressed, key):
++    assert _hypothesis_key(addressed) == key

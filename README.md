@@ -94,9 +94,11 @@ cd forge-0
 ```
 
 `assemble.py` checks out the pre-hackathon core, applies the patches, adds the new files, and checks
-that the result is byte for byte the development repository's current version. FORGE-0's code in it
-(`backend/`, `frontend/`, `demo/`, `scripts/`) is identical to the commit the benchmarks ran on; only
-documentation and the GitHub workflow template changed afterwards. FORGE-0 runs on its clearly
+that the result is byte for byte the development repository's current version. Since the benchmarks ran, FORGE-0's
+code has had two bug fixes, found while recording the demo on PostgreSQL: a repair's hypothesis key
+is stored as `H1` instead of the model's longer text (which failed the database insert), and the
+dashboard's reproduction badge shows the flaky-test triage result. Neither changes what FORGE-0
+decides. Everything else since then is documentation and the GitHub workflow template. FORGE-0 runs on its clearly
 labelled mock provider unless you set `AI_PROVIDER=meta` and `META_API_KEY` in `forge-0/.env` (or
 choose the provider in *Settings*), which runs it on Muse Spark 1.3.
 

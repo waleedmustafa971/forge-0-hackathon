@@ -1,8 +1,35 @@
 diff --git a/frontend/src/pages/investigation/Workspace.tsx b/frontend/src/pages/investigation/Workspace.tsx
-index 43c229f..5b3bcef 100644
+index 43c229f..2abfb95 100644
 --- a/frontend/src/pages/investigation/Workspace.tsx
 +++ b/frontend/src/pages/investigation/Workspace.tsx
-@@ -58,7 +58,7 @@ export default function Workspace({ live }: { live: LiveInvestigation }) {
+@@ -3,11 +3,13 @@ import { AgentPipeline } from '../../components/AgentPipeline';
+ import { EventLog } from '../../components/EventLog';
+ import { Card, ConfidenceBar, Empty, HypothesisStatus, OutcomeBadge, SimulatedNotice } from '../../components/ui';
+ import type { LiveInvestigation } from '../../hooks';
++import { reproductionBadge } from '../../reproduction';
+ 
+ export default function Workspace({ live }: { live: LiveInvestigation }) {
+   const inv = live.investigation!;
+   const report = inv.investigation_report;
+   const target = report?.target_failure;
++  const reproduction = reproductionBadge(report);
+   const belief = inv.summary?.belief as { unexplained?: number } | undefined;
+   const usage = inv.usage;
+   const budget = inv.budget;
+@@ -31,11 +33,7 @@ export default function Workspace({ live }: { live: LiveInvestigation }) {
+                   <code>{target.test_name}</code>
+                   <span className="faint small">{target.file}</span>
+                   <span className="spacer" />
+-                  {report?.reproduction_confirmed != null && (
+-                    <span className={`badge ${report.reproduction_confirmed ? 'green' : 'yellow'}`}>
+-                      {report.reproduction_confirmed ? 'reproduced in isolation' : 'not reproducible in isolation'}
+-                    </span>
+-                  )}
++                  {reproduction && <span className={`badge ${reproduction.tone}`}>{reproduction.label}</span>}
+                 </div>
+                 <pre className="code wrap">
+                   {target.error_name}: {target.error}
+@@ -58,7 +56,7 @@ export default function Workspace({ live }: { live: LiveInvestigation }) {
              flush
            >
              {!live.hypotheses.length ? (

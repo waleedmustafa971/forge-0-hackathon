@@ -1,5 +1,5 @@
 diff --git a/frontend/src/api/types.ts b/frontend/src/api/types.ts
-index 959dcc2..2f383ed 100644
+index 959dcc2..6484232 100644
 --- a/frontend/src/api/types.ts
 +++ b/frontend/src/api/types.ts
 @@ -76,7 +76,7 @@ export interface Investigation {
@@ -11,7 +11,29 @@ index 959dcc2..2f383ed 100644
    status: InvestigationStatus;
    phase: string;
    active_agent: string | null;
-@@ -170,7 +170,7 @@ export interface PredictionEvaluation {
+@@ -105,6 +105,13 @@ export interface FailureObservation {
+   implicated_files: string[];
+ }
+ 
++export interface FlakinessReport {
++  classification: 'deterministic' | 'intermittent' | 'order_dependent' | 'unknown';
++  isolated_runs: string[];
++  file_run: string | null;
++  summary: string;
++}
++
+ export interface InvestigationReportData {
+   repository: string;
+   file_count: number;
+@@ -114,6 +121,7 @@ export interface InvestigationReportData {
+   observed_failures: FailureObservation[];
+   target_failure: FailureObservation | null;
+   reproduction_confirmed: boolean | null;
++  flakiness?: FlakinessReport | null;
+   relevant_files: { path: string; reason: string; truncated: boolean }[];
+   notes: string[];
+ }
+@@ -170,7 +178,7 @@ export interface PredictionEvaluation {
    predicted: string;
    output_contains: string | null;
    observed: string;

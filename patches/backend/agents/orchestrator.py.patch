@@ -1,8 +1,16 @@
 diff --git a/backend/agents/orchestrator.py b/backend/agents/orchestrator.py
-index 9784caa..c25580d 100644
+index 9784caa..3ee7519 100644
 --- a/backend/agents/orchestrator.py
 +++ b/backend/agents/orchestrator.py
-@@ -47,6 +47,13 @@ NAME = "orchestrator"
+@@ -12,6 +12,7 @@ decision. Two modes:
+ from __future__ import annotations
+ 
+ import logging
++import re
+ import traceback
+ from datetime import UTC, datetime
+ from pathlib import Path
+@@ -47,10 +48,26 @@ NAME = "orchestrator"
  MIN_REPAIR_CONFIDENCE = 0.5
  
  
@@ -16,7 +24,20 @@ index 9784caa..c25580d 100644
  def _now() -> datetime:
      return datetime.now(UTC)
  
-@@ -109,9 +116,7 @@ class Orchestrator:
+ 
++def _hypothesis_key(addressed: str | None) -> str | None:
++    """The hypothesis a patch addresses, as its key. Models sometimes add the title ("H1: Float-based
++    conversion..."), which does not fit the 16-character column and failed the insert on PostgreSQL."""
++    if not addressed:
++        return None
++    match = re.match(r"\s*(H\d+)(?!\d)", addressed)
++    return match.group(1) if match else addressed.strip()[:16]
++
++
+ def _result_payload(result: ExecutionResult | None) -> dict[str, Any] | None:
+     return dump(result) if result is not None else None
+ 
+@@ -109,9 +126,7 @@ class Orchestrator:
                  budget=budget,
                  workspaces_keep=settings.keep_workspaces,
              )
@@ -27,7 +48,7 @@ index 9784caa..c25580d 100644
          ctx.emit(
              NAME,
              "started",
-@@ -155,12 +160,14 @@ class Orchestrator:
+@@ -155,12 +170,14 @@ class Orchestrator:
                      round=0,
                      designed_by="investigator",
                      kind="reproduction",
@@ -44,7 +65,7 @@ index 9784caa..c25580d 100644
                          "files": [],
                          "source_edits": [],
                      },
-@@ -168,7 +175,10 @@ class Orchestrator:
+@@ -168,7 +185,10 @@ class Orchestrator:
                      outcome=outcome,
                      result=_result_payload(run),
                      evaluation={
@@ -56,7 +77,7 @@ index 9784caa..c25580d 100644
                      },
                      attempts=1,
                      started_at=_now(),
-@@ -299,7 +309,7 @@ class Orchestrator:
+@@ -299,7 +319,7 @@ class Orchestrator:
          evaluations: list[dict[str, Any]] = []
          snapshot_before = self.beliefs.snapshot()
          if run.outcome in ("pass", "fail"):
@@ -65,7 +86,7 @@ index 9784caa..c25580d 100644
              apply_evidence(self.beliefs, key, evaluations, bool(spec["discriminating"]))
              self._sync_beliefs()
          evaluation = {
-@@ -308,7 +318,7 @@ class Orchestrator:
+@@ -308,7 +328,7 @@ class Orchestrator:
              "belief_before": snapshot_before,
              "belief_after": self.beliefs.snapshot(),
              "intervention_diff": run.intervention_diff,
@@ -74,7 +95,7 @@ index 9784caa..c25580d 100644
          }
          with session_scope() as db:
              row = db.get(Experiment, row_id)
-@@ -334,7 +344,7 @@ class Orchestrator:
+@@ -334,7 +354,7 @@ class Orchestrator:
              }
          )
          matched = [e["hypothesis"] for e in evaluations if e["matched"]]
@@ -83,7 +104,16 @@ index 9784caa..c25580d 100644
          ctx.emit(
              "experiment_executor",
              "experiment_result",
-@@ -547,6 +557,51 @@ class Orchestrator:
+@@ -479,7 +499,7 @@ class Orchestrator:
+                 investigation_id=self.investigation_id,
+                 key=key,
+                 attempt=attempt + 1,
+-                hypothesis_key=draft.hypothesis,
++                hypothesis_key=_hypothesis_key(draft.hypothesis),
+                 summary=draft.summary,
+                 rationale=draft.rationale,
+                 edits=[e.model_dump() for e in draft.edits],
+@@ -547,6 +567,51 @@ class Orchestrator:
              claimed_fixed=bool(draft.edits),
          )
  
@@ -135,7 +165,7 @@ index 9784caa..c25580d 100644
      # -------------------------------------------------------------------- finish
      def _finish(
          self, verdict: str, message: str, report: InvestigationReport, claimed_fixed: bool | None = None
-@@ -607,6 +662,8 @@ class Orchestrator:
+@@ -607,6 +672,8 @@ class Orchestrator:
                  return
              if ctx.mode == "baseline":
                  self._baseline(report)
