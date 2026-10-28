@@ -3,7 +3,7 @@
   // setup.sh assembles FORGE-0 (pre-hackathon core + this repository) and installs it;
   // start.sh serves the API and dashboard on port 8010 whenever the codespace starts.
   "name": "FORGE-0",
-  "image": "mcr.microsoft.com/devcontainers/python:1-3.12-bookworm",
+  "build": { "dockerfile": "Dockerfile" },  // the Python image, minus a broken apt source
   "features": {
     "ghcr.io/devcontainers/features/node:1": { "version": "24" },
     // A Docker daemon inside the codespace, for FORGE-0's experiment sandbox.
