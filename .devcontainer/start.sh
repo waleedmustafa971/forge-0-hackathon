@@ -2,7 +2,8 @@
 # Codespaces, on every start: serve FORGE-0's API and dashboard on port 8010, or say why not.
 # With a META_API_KEY Codespaces secret it runs on Muse Spark 1.3, otherwise on the mock provider.
 set -euo pipefail
-cd "$(dirname "$0")/.."
+here="$(cd "$(dirname "$0")" && pwd)"
+cd "$here/.."
 [ -d forge-0 ] || { echo "FORGE-0 is not installed (setup.sh did not finish): run bash .devcontainer/setup.sh" >&2; exit 1; }
 cd forge-0
 mkdir -p data
@@ -24,8 +25,7 @@ if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2> /dev/null; then
   sleep 2
 fi
 
-for _ in $(seq 1 60); do timeout 5 docker info > /dev/null 2>&1 && break; sleep 2; done
-timeout 5 docker info > /dev/null 2>&1 || fail "the Docker daemon is not reachable"
+bash "$here/docker-up.sh" || fail "the Docker daemon is not reachable"
 [ -f frontend/dist/index.html ] || fail "the dashboard is not built (frontend/dist/index.html is missing)"
 
 export SERVE_FRONTEND_DIR=frontend/dist
