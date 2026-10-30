@@ -5,6 +5,10 @@ root-cause hypotheses, runs experiments in an isolated sandbox to tell them apar
 patch only once the evidence points to a cause. An independent verifier must then accept the patch.
 The point is that a fix claim comes with proof, so a reviewer doesn't have to trust the agent.
 
+**[Watch the 3-minute demo](https://youtu.be/DmIuamMJUTg)** ·
+**[Live Muse Spark pull requests](https://github.com/waleedmustafa971/forge-0-demo/pulls)** ·
+**[Open in Codespaces](https://codespaces.new/waleedmustafa971/forge-0-hackathon)**
+
 This repository holds **only the work done during the Meta Global AI Developer Hackathon**
 (Indie Developer track, *Push the Frontier*), from kickoff on Oct 26, 2026 onward.
 
