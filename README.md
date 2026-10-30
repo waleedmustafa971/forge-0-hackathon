@@ -8,6 +8,31 @@ The point is that a fix claim comes with proof, so a reviewer doesn't have to tr
 This repository holds **only the work done during the Meta Global AI Developer Hackathon**
 (Indie Developer track, *Push the Frontier*), from kickoff on Oct 26, 2026 onward.
 
+## The problem
+
+AI coding assistants are now fast at writing fixes, but a fix that *looks* right isn't the same as one
+that *is* right. When a test fails, an assistant usually takes the first plausible explanation and
+writes a patch. If that explanation is wrong, the patch can still make the test pass and break
+something else, or fix a symptom while the cause stays. The work then moves to the reviewer, who has
+to re-debug the problem to know whether to trust the patch. For a team that ships to production, an
+AI fix nobody can check is a risk, not a saving.
+
+## Why FORGE-0 stands out
+
+* **It checks before it claims.** Muse Spark proposes several competing explanations, and each one
+  commits in advance to what an experiment should show if it is true. FORGE-0 runs those
+  experiments and keeps only the explanation the evidence supports. The model's reasoning is tested,
+  not trusted.
+* **Every fix comes with its proof.** The pull request description is the evidence: the root cause,
+  the explanations considered, the experiments that ruled some out, and the independent
+  verification. A reviewer reads the evidence instead of re-debugging.
+* **It says "I don't know" instead of guessing.** When no fix survives verification, FORGE-0 opens
+  no pull request. It posts the evidence as an issue comment instead, including the patches the
+  verifier rejected and why.
+* **Its claims are measured, including where it loses.** Hidden tests that FORGE-0 never sees score
+  every run, the harder defects were pre-registered before they ran, and the results below report
+  the losses too.
+
 ## What was pre-existing and what is new
 
 | | Where | When |
@@ -58,6 +83,74 @@ surrounding pre-existing code as context, and the lines they remove.) This repos
 
 Full results, including the losses, are in `docs/EVALUATION.md` and
 `benchmarks/preregistration/2026-10-27-harder-defects.md` (in [`patches/`](patches) and [`new/`](new)).
+
+## Shipping safely: CI/CD with AI in the loop
+
+FORGE-0 sits inside the delivery pipeline teams already use, so AI help doesn't bypass the checks
+they already trust:
+
+1. **The pipeline is the trigger.** A CI failure on one of the repository's own branches, or an
+   issue labelled `forge0`, starts FORGE-0 in GitHub Actions. Nobody has to paste code into a chat.
+2. **Untrusted code runs in a locked-down sandbox.** Experiments and tests run in Docker with no
+   network, a read-only root filesystem, a non-root user with all capabilities dropped, resource
+   limits and a hard timeout, and only allowlisted test runners; the model never writes shell
+   commands.
+3. **A fix has to pass twice.** FORGE-0's independent verifier re-runs the whole suite on a fresh
+   copy, and then the repository's own CI checks the pull request test by test: the target test now
+   passes, and every test that passed before still passes.
+4. **A human still merges.** FORGE-0 opens a pull request; it never merges. Developers keep the
+   decision, with the evidence in front of them.
+5. **Cost is bounded and visible.** Each investigation has budgets for model calls, experiments,
+   repair attempts and time, and reports its token use and cost. The live runs cost $0.07–$0.12
+   each.
+
+For developers, a red build arrives with a candidate fix and the reasons to believe it. For a
+company, that means AI speed without lowering the bar for what reaches the main branch: no
+unverified patch, no silent regression, and a record of why each change was made.
+
+## How Meta's Muse models shaped FORGE-0
+
+Before the hackathon, FORGE-0 had never run on a real model. The hackathon work grew out of running
+it on Muse Spark:
+
+* **Muse Spark 1.3 is the reasoning engine.** Its JSON-schema structured outputs make each
+  hypothesis, prior, prediction and experiment plan machine-checkable, which is what lets FORGE-0
+  hold the model to its own predictions. `reasoning_effort` is the cost/quality dial, and the usage
+  accounting (including reasoning and cached tokens) feeds each investigation's cost report.
+* **The first real runs forced real fixes.** Replies cut off when reasoning used the whole
+  `max_completion_tokens` budget are now detected and retried with a higher limit, and a probe the
+  runtime itself fails no longer counts as evidence against a correct prediction.
+* **Muse Spark Open (open weights, on Baseten) made model routing possible.** Muse Spark 1.3 forms
+  the hypotheses, and Muse Spark Open designs experiments and writes repairs; each call records which
+  model served it. A team that can't send private code to a closed model can run the same verified
+  workflow on open weights.
+* **Muse Spark Open also exposed FORGE-0's weakest point.** In 7 of 39 runs, experiment design
+  returned no plan because the model spent its whole token budget reasoning. That result is
+  reported, not hidden, and it is the next thing to fix.
+* **Muse Voice Transcribe** timed the captions of the demo video.
+
+## For the judges
+
+| Criterion | Where to check it |
+| --- | --- |
+| **Impact**: a real problem for real teams | Unverified AI fixes are a review and production risk. FORGE-0 works where teams already work (GitHub Actions and pull requests), made no false fix claims in 78 benchmark runs, and was tested on a real upstream bug (R1, `parse` #162). |
+| **Use of Meta AI tooling** | Muse Spark 1.3 on the Meta Model API (structured outputs, reasoning effort, usage accounting), Muse Spark Open on Baseten in a two-model route, and Muse Voice Transcribe for the video. Muse Spark 1.3 wrote the three public pull requests in [forge-0-demo](https://github.com/waleedmustafa971/forge-0-demo), running in GitHub Actions. |
+| **Technical depth** | Competing hypotheses with pre-committed predictions, experiments in an isolated sandbox, belief updates, an independent verifier, flaky-test triage, ranked context selection, a fair edit-test baseline, hidden-test scoring and pre-registered defects. |
+| **Demo** | The [3-minute video](https://youtu.be/DmIuamMJUTg), the live PRs in forge-0-demo, and a one-click Codespace whose smoke test runs on every change. |
+| **New work only** | The pre-existing core is in [forge-0-core](https://github.com/waleedmustafa971/forge-0-core); [NEW_WORK.md](NEW_WORK.md) lists every file and line range written during the event. |
+
+### Final check before submission (Oct 30, 2026)
+
+| Check | Result |
+| --- | --- |
+| Fresh clone of this repository, then `python assemble.py` | 53 patches and 90 new files applied; the tree is byte for byte identical to the development repository |
+| Backend unit and API tests | 132 passed |
+| Sandbox integration tests on real Docker | 17 passed |
+| Frontend tests | 13 passed |
+| Double-charge demo audit (`scripts/audit_demo.py`, mock provider) | 17/17 checks passed |
+| Live investigation of the same bug on Muse Spark 1.3 | Verified fix in 87 s: 3 experiments, 11 sandbox runs, $0.077, no failed model calls |
+| Meta Model API connectivity and a live completion | OK |
+| CI on the public repositories (Codespace smoke test, demo contract, core) | Passing |
 
 ## See it work, with nothing to install
 
